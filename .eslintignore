@@ -1,0 +1,7 @@
+# Auto Generated PWA files
+public/sw*
+public/workbox*
+ipfs/*
+sw.js
+workbox*
+/packages/smol/public/workbox-*.js

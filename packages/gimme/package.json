@@ -1,0 +1,20 @@
+{
+	"name": "gimme",
+	"private": true,
+	"workspaces": [
+		"packages/*"
+	],
+	"scripts": {
+		"dev": "next",
+		"dev:ts": "tsc --watch",
+		"start": "tsc && next build && next start",
+		"build": "tsc && next build",
+		"export": "tsc && next build && next export -o ipfs"
+	},
+	"dependencies": {
+		"@gnosis.pm/safe-apps-react-sdk": "^4.6.2",
+		"@radix-ui/react-popover": "^1.1.1",
+		"@yearn-finance/web-lib": "^3.0.191",
+		"lib": "workspace:lib"
+	}
+}
