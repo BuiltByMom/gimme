@@ -309,10 +309,16 @@ export const useVanilaSolver = (
 
 					result = await sdk.txs.getBySafeTxHash(res.safeTxHash);
 					await new Promise(resolve => setTimeout(resolve, 30_000));
-				} while (result.txStatus !== TransactionStatus.SUCCESS);
+				} while (
+					result.txStatus !== 'SUCCESS' &&
+					result.txStatus !== 'FAILED' &&
+					result.txStatus !== 'CANCELLED'
+				);
 
-				set_depositStatus({...defaultTxStatus, success: true});
-				onSuccess?.();
+				set_depositStatus({...defaultTxStatus, success: result?.txStatus === 'SUCCESS'});
+				if (result?.txStatus === 'SUCCESS') {
+					onSuccess?.();
+				}
 			} catch (error) {
 				set_depositStatus({...defaultTxStatus, error: true});
 				toast.error((error as BaseError)?.message || 'An error occured while creating your transaction!');
