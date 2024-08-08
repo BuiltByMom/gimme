@@ -1,6 +1,6 @@
 # Gimme
 
-![https://raw.githubusercontent.com/BuiltByMom/gimme/main/packages/gimme/public/og.png](https://raw.githubusercontent.com/BuiltByMom/gimme/main/packages/gimme/public/og.png)
+![./packages/gimme/public/og.png](./packages/gimme/public/og.png)
 ## Build and Develop
 
 ### Installing Dependencies
