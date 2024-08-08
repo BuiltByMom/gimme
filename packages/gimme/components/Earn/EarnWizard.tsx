@@ -1,4 +1,5 @@
 import {useCallback, useMemo, useState} from 'react';
+import {usePlausible} from 'next-plausible';
 import {isAddressEqual} from 'viem';
 import useWallet from '@builtbymom/web3/contexts/useWallet';
 import {useWeb3} from '@builtbymom/web3/contexts/useWeb3';
@@ -10,6 +11,7 @@ import {useVaults} from '@lib/contexts/useVaults';
 import {useIsZapNeeded} from '@lib/hooks/helpers/useIsZapNeeded';
 import {useCurrentChain} from '@lib/hooks/useCurrentChain';
 import {Button} from '@lib/primitives/Button';
+import {PLAUSIBLE_EVENTS} from '@lib/utils/plausible';
 
 import type {ReactElement} from 'react';
 
@@ -19,6 +21,7 @@ export function EarnWizard(): ReactElement {
 	const {configuration, onResetDeposit} = useDepositSolver();
 	const {vaults, vaultsArray} = useVaults();
 	const chain = useCurrentChain();
+	const plausible = usePlausible();
 
 	const [transactionResult, set_transactionResult] = useState<{isExecuted: boolean; message: ReactElement | null}>({
 		isExecuted: false,
@@ -113,12 +116,9 @@ export function EarnWizard(): ReactElement {
 		isApproved,
 		isFetchingAllowance,
 		approvalStatus,
-
 		onExecuteDeposit,
 		depositStatus,
-
 		onExecuteForGnosis,
-
 		isFetchingQuote,
 		quote
 	} = useDepositSolver();
@@ -141,9 +141,37 @@ export function EarnWizard(): ReactElement {
 
 	const onAction = useCallback(async () => {
 		if (isWalletSafe) {
+			const {token} = configuration.asset;
+			const {opportunity} = configuration;
+			plausible(PLAUSIBLE_EVENTS.DEPOSIT),
+				{
+					props: {
+						vaultAddress: toAddress(opportunity?.address),
+						vaultName: opportunity?.name,
+						vaultChainID: opportunity?.chainID,
+						tokenAddress: toAddress(token?.address),
+						tokenName: token?.name,
+						isSwap: isZapNeeded,
+						tokenAmount: configuration.asset.amount
+					}
+				};
 			return onExecuteForGnosis(() => onRefreshTokens('DEPOSIT'));
 		}
 		if (isApproved) {
+			const {token} = configuration.asset;
+			const {opportunity} = configuration;
+			plausible(PLAUSIBLE_EVENTS.DEPOSIT),
+				{
+					props: {
+						vaultAddress: toAddress(opportunity?.address),
+						vaultName: opportunity?.name,
+						vaultChainID: opportunity?.chainID,
+						tokenAddress: toAddress(token?.address),
+						tokenName: token?.name,
+						isSwap: isZapNeeded,
+						tokenAmount: configuration.asset.amount
+					}
+				};
 			return onExecuteDeposit(() => onRefreshTokens('DEPOSIT'));
 		}
 		return onApprove(() => onRefreshTokens('APPROVE'));
