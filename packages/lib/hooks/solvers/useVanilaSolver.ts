@@ -34,7 +34,9 @@ export const useVanilaSolver = (
 	inputAsset: TTokenAmountInputElement,
 	vault: TYDaemonVault | undefined,
 	isZapNeeded: boolean,
-	contextActions: 'DEPOSIT' | 'WITHDRAW'
+	contextActions: 'DEPOSIT' | 'WITHDRAW',
+	deadline: number = 60,
+	withPermit: boolean = true
 ): TSolverContextBase => {
 	const {provider, address} = useWeb3();
 	const {sdk} = useSafeAppsSDK();
@@ -105,19 +107,24 @@ export const useVanilaSolver = (
 			assert(inputAsset.token, 'Input token is not set');
 			assert(vault?.address, 'Output token is not set');
 
-			const shouldUsePermit = await isPermitSupported({
+			const hasPermitSupported = await isPermitSupported({
 				contractAddress: inputAsset.token.address,
 				chainID: inputAsset.token.chainID,
 				options: {disableExceptions: true}
 			});
 			try {
-				if (shouldUsePermit && isV3Vault && isAddress(CHAINS[inputAsset.token.chainID].yearnRouterAddress)) {
+				if (
+					hasPermitSupported &&
+					withPermit &&
+					isV3Vault &&
+					isAddress(CHAINS[inputAsset.token.chainID].yearnRouterAddress)
+				) {
 					const signResult = await signPermit({
 						contractAddress: inputAsset.token.address,
 						ownerAddress: toAddress(address),
 						spenderAddress: toAddress(CHAINS[inputAsset.token.chainID].yearnRouterAddress),
 						value: inputAsset.normalizedBigAmount?.raw || 0n,
-						deadline: BigInt(Math.floor(Date.now() / 1000) + 60 * 60), // 60 minutes
+						deadline: BigInt(Math.floor(Date.now() / 1000) + 60 * deadline),
 						chainID: inputAsset.token.chainID
 					});
 					if (signResult?.signature) {
@@ -157,8 +164,10 @@ export const useVanilaSolver = (
 			inputAsset.token,
 			inputAsset.normalizedBigAmount,
 			vault?.address,
+			withPermit,
 			isV3Vault,
 			address,
+			deadline,
 			approvalStatus,
 			provider,
 			onRetrieveAllowance,

@@ -97,7 +97,7 @@ html {
 }
 
 .options-input {
-	padding: 12px 16px;
+	padding: 12px 30px 12px 16px;
 	border: none;
 	outline: none;
 	transition: all ease;
@@ -105,10 +105,21 @@ html {
 	background: #f2f9ff;
 	width: 100%;
 	text-align: right;
+	--tw-ring-color: transparent;
+	--tw-rind-shadow: transparent;
 }
 
-.options-input:hover:not(:focus) {
-	outline: 1px solid #e3f2fe;
+.options-input::placeholder {
+	color: #8aa9c1;
+}
+
+.options-input:disabled {
+	cursor: not-allowed;
+}
+
+.options-input:hover:not(:focus):not(:disabled) {
+	outline: 1px solid #9ed3fb;
+	--tw-ring-color: #9ed3fb;
 }
 
 .options-input:invalid {
@@ -116,8 +127,9 @@ html {
 	outline: 1px solid red;
 }
 
-.deadline-input {
-	text-align: left;
+.options-input:focus {
+	border: none;
+	--tw-ring-color: #9ed3fb;
 }
 
 * {

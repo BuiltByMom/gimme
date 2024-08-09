@@ -5,7 +5,7 @@ import {Dialog, DialogPanel, Transition, TransitionChild} from '@headlessui/reac
 import {IconCross} from '@lib/icons/IconCross';
 import {IconOptions} from '@lib/icons/IconOptions';
 
-import {OptionsContent} from './OptionsContent';
+import {SettingsContent} from './SettingsContent';
 
 export function Settings(props: {
 	isCurtainOpen: boolean;
@@ -24,7 +24,7 @@ export function Settings(props: {
 							animate={{opacity: 1}}
 							exit={{opacity: 0}}>
 							<div className={'max-w-[320px]'}>
-								<OptionsContent />
+								<SettingsContent />
 							</div>
 						</motion.div>
 						<motion.div
@@ -43,13 +43,21 @@ export function Settings(props: {
 					'bg-grey-400 border-grey-300 invisible absolute -right-14 top-0 rounded-full border p-3 md:visible'
 				}
 				onClick={() => props.onOpenCurtainChange(!props.isCurtainOpen)}>
-				<IconOptions className={'text-grey-200 size-6'} />
+				{props.isCurtainOpen ? (
+					<IconCross className={'text-grey-200 size-6'} />
+				) : (
+					<IconOptions className={'text-grey-200 size-6'} />
+				)}
 			</button>
 
 			<button
 				className={'bg-grey-400 border-grey-300 absolute -top-14 right-0 rounded-full border p-3 md:invisible'}
 				onClick={() => props.onOpenModalChange(!props.isModalOpen)}>
-				<IconOptions className={'text-grey-200 size-6'} />
+				{props.isModalOpen ? (
+					<IconCross className={'text-grey-200 size-6'} />
+				) : (
+					<IconOptions className={'text-grey-200 size-6'} />
+				)}
 			</button>
 
 			<Transition
@@ -100,7 +108,7 @@ export function Settings(props: {
 										</button>
 									</div>
 									<div>
-										<OptionsContent />
+										<SettingsContent />
 									</div>
 								</DialogPanel>
 							</TransitionChild>
