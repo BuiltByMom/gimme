@@ -3,7 +3,6 @@ import {AnimatePresence, motion} from 'framer-motion';
 import {cl} from '@builtbymom/web3/utils';
 import {Dialog, DialogPanel, Transition, TransitionChild} from '@headlessui/react';
 import {IconCross} from '@lib/icons/IconCross';
-import {IconOptions} from '@lib/icons/IconOptions';
 
 import {SettingsContent} from './SettingsContent';
 
@@ -20,9 +19,9 @@ export function Settings(props: {
 					<>
 						<motion.div
 							className={'invisible absolute right-0 top-0 z-[60] h-full rounded-3xl bg-white md:visible'}
-							initial={{opacity: 0}}
-							animate={{opacity: 1}}
-							exit={{opacity: 0}}>
+							style={{x: 100, opacity: 0}}
+							animate={{x: 0, opacity: 1}}
+							exit={{x: 100, opacity: 0}}>
 							<div className={'max-w-[320px]'}>
 								<SettingsContent />
 							</div>
@@ -37,28 +36,6 @@ export function Settings(props: {
 					</>
 				)}
 			</AnimatePresence>
-
-			<button
-				className={
-					'bg-grey-400 border-grey-300 invisible absolute -right-14 top-0 rounded-full border p-3 md:visible'
-				}
-				onClick={() => props.onOpenCurtainChange(!props.isCurtainOpen)}>
-				{props.isCurtainOpen ? (
-					<IconCross className={'text-grey-200 size-6'} />
-				) : (
-					<IconOptions className={'text-grey-200 size-6'} />
-				)}
-			</button>
-
-			<button
-				className={'bg-grey-400 border-grey-300 absolute -top-14 right-0 rounded-full border p-3 md:invisible'}
-				onClick={() => props.onOpenModalChange(!props.isModalOpen)}>
-				{props.isModalOpen ? (
-					<IconCross className={'text-grey-200 size-6'} />
-				) : (
-					<IconOptions className={'text-grey-200 size-6'} />
-				)}
-			</button>
 
 			<Transition
 				show={props.isModalOpen}

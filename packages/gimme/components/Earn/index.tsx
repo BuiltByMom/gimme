@@ -14,6 +14,7 @@ import {createUniqueID} from '@lib/utils/tools.identifiers';
 import {EarnWizard} from './EarnWizard';
 import {SelectOpportunityButton} from './SelectVaultButton';
 import {Settings} from './Settings';
+import {SettingsTrigger} from './SettingsTrigger';
 
 import type {TAddress} from '@builtbymom/web3/types';
 import type {TTokenAmountInputElement} from '@lib/types/utils';
@@ -120,27 +121,39 @@ export function Earn(): ReactElement {
 	}, [configuration.asset.token?.symbol, configuration.opportunity?.token.symbol, isFetchingQuote, quote]);
 
 	return (
-		<div className={cl('relative w-full max-w-[560px] z-20 flex flex-col items-center gap-10 rounded-3xl')}>
-			<div className={'border-grey-200 w-full rounded-3xl border bg-white p-4 md:p-6'}>
-				<div className={cl('flex w-full flex-col gap-2')}>
-					<TokenAmountInput
-						onSetValue={onSetAsset}
-						value={configuration.asset}
-					/>
+		<div className={'relative'}>
+			<div
+				className={cl(
+					'relative w-full overflow-hidden max-w-[560px] z-20 flex flex-col items-center gap-10 rounded-3xl'
+				)}>
+				<div className={'border-grey-200 w-full rounded-3xl border bg-white p-4 md:p-6'}>
+					<div className={cl('flex w-full flex-col gap-2')}>
+						<TokenAmountInput
+							onSetValue={onSetAsset}
+							value={configuration.asset}
+						/>
 
-					{!isWithdrawing && <SelectOpportunityButton onSetOpportunity={onSetOpportunity} />}
-					{isZapNeeded ? (
-						<div
-							className={
-								'bg-grey-0 border-grey-200 text-grey-700 w-full items-center rounded-2xl border p-4 pr-6 text-xs font-medium md:min-h-[66px]'
-							}>
-							{getZapsBadgeContent()}
-						</div>
-					) : null}
-					<EarnWizard />
+						{!isWithdrawing && <SelectOpportunityButton onSetOpportunity={onSetOpportunity} />}
+						{isZapNeeded ? (
+							<div
+								className={
+									'bg-grey-0 border-grey-200 text-grey-700 w-full items-center rounded-2xl border p-4 pr-6 text-xs font-medium md:min-h-[66px]'
+								}>
+								{getZapsBadgeContent()}
+							</div>
+						) : null}
+						<EarnWizard />
+					</div>
 				</div>
+
+				<Settings
+					isModalOpen={isSettingsModalOpen}
+					isCurtainOpen={isSettingsCurtainOpen}
+					onOpenModalChange={set_isSettingsModalOpen}
+					onOpenCurtainChange={set_isSettingsCurtainOpen}
+				/>
 			</div>
-			<Settings
+			<SettingsTrigger
 				isModalOpen={isSettingsModalOpen}
 				isCurtainOpen={isSettingsCurtainOpen}
 				onOpenModalChange={set_isSettingsModalOpen}
