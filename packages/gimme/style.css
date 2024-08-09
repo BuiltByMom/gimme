@@ -96,6 +96,30 @@ html {
 	scrollbar-gutter: stable;
 }
 
+.options-input {
+	padding: 12px 16px;
+	border: none;
+	outline: none;
+	transition: all ease;
+	border-radius: 16px;
+	background: #f2f9ff;
+	width: 100%;
+	text-align: right;
+}
+
+.options-input:hover:not(:focus) {
+	outline: 1px solid #e3f2fe;
+}
+
+.options-input:invalid {
+	border: none;
+	outline: 1px solid red;
+}
+
+.deadline-input {
+	text-align: left;
+}
+
 * {
 	scrollbar-color: #f7f7f7;
 	scroll-behavior: smooth;

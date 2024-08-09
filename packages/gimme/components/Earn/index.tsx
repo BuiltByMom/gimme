@@ -1,8 +1,8 @@
-import {type ReactElement, useCallback, useEffect, useRef} from 'react';
+import {type ReactElement, useCallback, useEffect, useRef, useState} from 'react';
 import {useRouter} from 'next/router';
 import {serialize} from 'wagmi';
 import useWallet from '@builtbymom/web3/contexts/useWallet';
-import {isAddress, isZeroAddress} from '@builtbymom/web3/utils';
+import {cl, isAddress, isZeroAddress} from '@builtbymom/web3/utils';
 import {TokenAmountInput} from '@lib/common/TokenAmountInput';
 import {useDepositSolver} from '@lib/contexts/useDepositSolver';
 import {useVaults} from '@lib/contexts/useVaults';
@@ -13,6 +13,7 @@ import {createUniqueID} from '@lib/utils/tools.identifiers';
 
 import {EarnWizard} from './EarnWizard';
 import {SelectOpportunityButton} from './SelectVaultButton';
+import {Settings} from './Settings';
 
 import type {TAddress} from '@builtbymom/web3/types';
 import type {TTokenAmountInputElement} from '@lib/types/utils';
@@ -27,6 +28,9 @@ export function Earn(): ReactElement {
 	const {quote, isFetchingQuote} = useDepositSolver();
 	const {isZapNeeded} = useIsZapNeeded(configuration.asset.token?.address, configuration.opportunity?.token.address);
 	const chain = useCurrentChain();
+
+	const [isSettingsModalOpen, set_isSettingsModalOpen] = useState(false);
+	const [isSettingsCurtainOpen, set_isSettingsCurtainOpen] = useState(false);
 
 	const isWithdrawing =
 		configuration.asset.token && !!vaults[configuration.asset.token?.address] && !configuration.opportunity;
@@ -94,11 +98,11 @@ export function Earn(): ReactElement {
 
 	const getZapsBadgeContent = useCallback(() => {
 		if (isFetchingQuote) {
-			return <p>{'Checking possible routes...'}</p>;
+			return <p className={'w-full'}>{'Checking possible routes...'}</p>;
 		}
 
 		if (!quote) {
-			return <p>{'Sorry! No possible routes found for this configuration!'}</p>;
+			return <p className={'w-full'}>{'Sorry! No possible routes found for this configuration!'}</p>;
 		}
 
 		return (
@@ -116,9 +120,9 @@ export function Earn(): ReactElement {
 	}, [configuration.asset.token?.symbol, configuration.opportunity?.token.symbol, isFetchingQuote, quote]);
 
 	return (
-		<div className={' z-20 flex w-full flex-col items-center gap-10'}>
-			<div className={'border-grey-200 w-full max-w-[560px] rounded-3xl border bg-white p-4 md:p-6'}>
-				<div className={'flex w-full flex-col gap-2'}>
+		<div className={cl('relative w-full max-w-[560px] z-20 flex flex-col items-center gap-10 rounded-3xl')}>
+			<div className={'border-grey-200 w-full rounded-3xl border bg-white p-4 md:p-6'}>
+				<div className={cl('flex w-full flex-col gap-2')}>
 					<TokenAmountInput
 						onSetValue={onSetAsset}
 						value={configuration.asset}
@@ -136,6 +140,12 @@ export function Earn(): ReactElement {
 					<EarnWizard />
 				</div>
 			</div>
+			<Settings
+				isModalOpen={isSettingsModalOpen}
+				isCurtainOpen={isSettingsCurtainOpen}
+				onOpenModalChange={set_isSettingsModalOpen}
+				onOpenCurtainChange={set_isSettingsCurtainOpen}
+			/>
 		</div>
 	);
 }
