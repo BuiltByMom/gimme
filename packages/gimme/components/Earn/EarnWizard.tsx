@@ -175,7 +175,17 @@ export function EarnWizard(): ReactElement {
 			return onExecuteDeposit(() => onRefreshTokens('DEPOSIT'));
 		}
 		return onApprove(() => onRefreshTokens('APPROVE'));
-	}, [isApproved, isWalletSafe, onApprove, onExecuteDeposit, onExecuteForGnosis, onRefreshTokens]);
+	}, [
+		configuration,
+		isApproved,
+		isWalletSafe,
+		isZapNeeded,
+		onApprove,
+		onExecuteDeposit,
+		onExecuteForGnosis,
+		onRefreshTokens,
+		plausible
+	]);
 
 	const isValid = useMemo((): boolean => {
 		if (isAboveBalance) {
