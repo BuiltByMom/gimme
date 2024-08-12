@@ -208,11 +208,11 @@ export const useVanilaSolver = (
 						amount: toBigInt(inputAsset?.normalizedBigAmount?.raw),
 						statusHandler: set_depositStatus
 					});
-					onRetrieveAllowance();
 				}
 
 				if (result.isSuccessful) {
 					onSuccess();
+					onRetrieveAllowance();
 					set_depositStatus({...defaultTxStatus, success: true});
 					return;
 				}

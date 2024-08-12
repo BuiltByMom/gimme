@@ -140,18 +140,17 @@ export function EarnWizard(): ReactElement {
 	}, [onResetDeposit]);
 
 	const onDepositSuccess = useCallback(() => {
-		plausible(PLAUSIBLE_EVENTS.DEPOSIT),
-			{
-				props: {
-					vaultAddress: toAddress(configuration.opportunity?.address),
-					vaultName: configuration.opportunity?.name,
-					vaultChainID: configuration.opportunity?.chainID,
-					tokenAddress: toAddress(configuration.asset.token?.address),
-					tokenName: configuration.asset.token?.name,
-					isSwap: isZapNeeded,
-					tokenAmount: configuration.asset.amount
-				}
-			};
+		plausible(PLAUSIBLE_EVENTS.DEPOSIT, {
+			props: {
+				vaultAddress: toAddress(configuration.opportunity?.address),
+				vaultName: configuration.opportunity?.name,
+				vaultChainID: configuration.opportunity?.chainID,
+				tokenAddress: toAddress(configuration.asset.token?.address),
+				tokenName: configuration.asset.token?.name,
+				isSwap: isZapNeeded,
+				tokenAmount: configuration.asset.amount
+			}
+		});
 		onRefreshTokens('DEPOSIT');
 	}, [
 		configuration.asset.amount,
