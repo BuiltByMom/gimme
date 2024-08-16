@@ -221,7 +221,7 @@ export function Portfolio(): ReactNode {
 					title={'Your Opportunities'}
 					sortBy={sortBy}
 					sortDirection={sortDirection}
-					onSort={(newSortBy: string, newSortDirection: string): void => {
+					onSort={(newSortBy: string, newSortDirection: string | null): void => {
 						onChangeSort(newSortDirection as TSortDirection, newSortBy as TPossibleSortBy);
 					}}
 					items={[
