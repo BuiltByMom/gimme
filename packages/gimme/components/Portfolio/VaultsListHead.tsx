@@ -6,11 +6,11 @@ import type {TSortDirection} from '@builtbymom/web3/types';
 export function VaultsListHead(props: {
 	sortBy: string;
 	sortDirection: TSortDirection;
-	onSort: (newSortDirection: string, newSortBy: string) => void;
+	onSort: (newSortDirection: string, newSortBy: string | null) => void;
 	items: {label: string; value: string; isSortable: boolean}[];
 	title: string;
 }): ReactElement {
-	const toggleSortDirection = (newSortBy: string): TSortDirection => {
+	const toggleSortDirection = (newSortBy: string | null): TSortDirection => {
 		if (props.sortBy === newSortBy) {
 			if (props.sortDirection === '') {
 				return 'desc';
