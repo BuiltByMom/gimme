@@ -39,8 +39,8 @@ export const usePortalsSolver = (
 	outputTokenAddress: TAddress | undefined,
 	isZapNeeded: boolean,
 	slippage: string = '1',
-	withPermit: boolean = true,
-	deadline: number = 60
+	deadline: number = 60,
+	withPermit: boolean = true
 ): TSolverContextBase => {
 	const {sdk} = useSafeAppsSDK();
 	const {address, provider, isWalletSafe} = useWeb3();

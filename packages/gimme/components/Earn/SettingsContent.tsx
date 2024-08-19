@@ -5,24 +5,24 @@ import {cl} from '@builtbymom/web3/utils';
 import * as SwitchPrimitive from '@radix-ui/react-switch';
 import {Switch as CustomSwitch} from '@lib/common/Switch';
 
-const SWITCH_VALUES = {
+const SLIPPAGE_TYPE_VALUES = {
 	AUTO: 0,
 	CUSTOM: 1
 };
 
-const SWITCH_OPTIONS = [
-	{title: 'Auto', value: SWITCH_VALUES.AUTO},
-	{title: 'Custom', value: SWITCH_VALUES.CUSTOM}
+const SLIPPAGE_OPTIONS = [
+	{title: 'Auto', value: SLIPPAGE_TYPE_VALUES.AUTO},
+	{title: 'Custom', value: SLIPPAGE_TYPE_VALUES.CUSTOM}
 ];
 
 export function SettingsContent(): ReactElement {
-	const [value, set_value] = useLocalStorage('type', SWITCH_VALUES.AUTO);
+	const [slippageType, set_slippageType] = useLocalStorage('type', SLIPPAGE_TYPE_VALUES.AUTO);
 
 	const [slippage, set_slippage] = useLocalStorage('slippage', '1');
 	const [deadline, set_deadline] = useLocalStorage('deadline', '60');
 	const [withPermit, set_withPermit] = useLocalStorage('withPermit', true);
 
-	const isSlippageInputDisabled = value === SWITCH_VALUES.AUTO;
+	const isSlippageInputDisabled = slippageType === SLIPPAGE_TYPE_VALUES.AUTO;
 
 	const onChangeSlippage = useCallback(
 		(slippage: string | null) => {
@@ -34,9 +34,9 @@ export function SettingsContent(): ReactElement {
 	const onSwitch = useCallback(
 		(value: number) => {
 			onChangeSlippage('1');
-			set_value(value);
+			set_slippageType(value);
 		},
-		[onChangeSlippage, set_value]
+		[onChangeSlippage, set_slippageType]
 	);
 
 	const onChangeDeadline = useCallback(
@@ -60,9 +60,9 @@ export function SettingsContent(): ReactElement {
 				<div className={'flex gap-2'}>
 					<div className={'basis-1/2'}>
 						<CustomSwitch
-							options={SWITCH_OPTIONS}
+							options={SLIPPAGE_OPTIONS}
 							onSelectValue={onSwitch}
-							value={value}
+							value={slippageType}
 						/>
 					</div>
 					<div className={cl('relative basis-1/2', isSlippageInputDisabled ? 'cursor-not-allowed' : '')}>
@@ -76,7 +76,7 @@ export function SettingsContent(): ReactElement {
 							placeholder={'0.00'}
 							value={slippage}
 							onChange={onChangeSlippage}
-							disabled={value === SWITCH_VALUES.AUTO}
+							disabled={slippageType === SLIPPAGE_TYPE_VALUES.AUTO}
 							decimalSeparator={'.'}
 							min={'0.1'}
 							max={'10'}
@@ -114,7 +114,7 @@ export function SettingsContent(): ReactElement {
 				<p className={'text-xs font-bold'}>{'Use permission'}</p>
 				<div className={'flex gap-4'}>
 					<p className={'text-grey-700 text-xs'}>
-						{'Leave this switch untouched to use gasless gasless approvals when possible'}
+						{'Leave this switch untouched to use gasless approvals when possible'}
 					</p>
 					<SwitchPrimitive.Root
 						className={'SwitchRoot'}

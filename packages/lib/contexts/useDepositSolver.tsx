@@ -83,8 +83,8 @@ export function DepositSolverContextApp({children}: {children: ReactElement}): R
 		configuration.opportunity?.address,
 		isZapNeeded,
 		slippage,
-		withPermit,
-		+deadline
+		+deadline,
+		withPermit
 	);
 	const [isDeposited, set_isDeposited] = useState<boolean>(false);
 
