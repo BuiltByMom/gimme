@@ -38,6 +38,7 @@ export const usePortalsSolver = (
 	inputAsset: TTokenAmountInputElement,
 	outputTokenAddress: TAddress | undefined,
 	isZapNeeded: boolean,
+	isBridgeNeeded: boolean,
 	slippage: string = '1',
 	deadline: number = 60,
 	withPermit: boolean = true
@@ -61,16 +62,13 @@ export const usePortalsSolver = (
 	 ** 1. No token selected
 	 ** 2. Input amount is either undefined or zero
 	 ** 3. Zap is not needed for this configuration
+	 ** 4. Bridge is needed for this configuration
 	 *********************************************************************************************/
 	const shouldDisableFetches = useMemo(() => {
-		return !inputAsset.token || !inputAsset.amount || !outputTokenAddress || !isZapNeeded;
-	}, [inputAsset.amount, inputAsset.token, isZapNeeded, outputTokenAddress]);
+		return !inputAsset.token || !inputAsset.amount || !outputTokenAddress || !isZapNeeded || isBridgeNeeded;
+	}, [inputAsset.amount, inputAsset.token, isBridgeNeeded, isZapNeeded, outputTokenAddress]);
 
 	const {getIsStablecoin} = useGetIsStablecoin();
-	const isStablecoin = getIsStablecoin({
-		address: inputAsset.token?.address,
-		chainID: inputAsset.token?.chainID
-	});
 
 	const onRetrieveQuote = useCallback(async () => {
 		if (!inputAsset.token || !outputTokenAddress || inputAsset.normalizedBigAmount === zeroNormalizedBN) {
@@ -522,7 +520,7 @@ export const usePortalsSolver = (
 			inputAsset.normalizedBigAmount?.raw,
 			outputTokenAddress,
 			address,
-			isStablecoin,
+			slippage,
 			isWalletSafe,
 			sdk.txs,
 			permitSignature

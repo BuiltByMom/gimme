@@ -1,10 +1,7 @@
 /* eslint-disable object-curly-newline */
 'use client';
 
-import {
-	mainnet,
-	polygon
-} from 'viem/chains';
+import {arbitrum, mainnet, polygon} from 'viem/chains';
 import {toAddress} from '@builtbymom/web3/utils';
 import {localhost} from '@builtbymom/web3/utils/wagmi';
 
@@ -21,7 +18,6 @@ type TSmolChains = TNDict<
 		isEnabled: boolean;
 	}
 >;
-
 
 const isDev = process.env.NODE_ENV === 'development' && Boolean(process.env.SHOULD_USE_FORKNET);
 const CHAINS: TSmolChains = {
@@ -43,6 +39,15 @@ const CHAINS: TSmolChains = {
 		yearnRouterAddress: toAddress('0x1112dbcf805682e828606f74ab717abf4b4fd8de'),
 		isEnabled: true
 	},
+	[arbitrum.id]: {
+		...arbitrum,
+		safeAPIURI: 'https://safe-transaction-arbitrum.safe.global',
+		safeUIURI: 'https://app.safe.global/home?safe=matic:',
+		coingeckoGasCoinID: 'arbitrum',
+		llamaChainName: 'arbitrum',
+		yearnRouterAddress: toAddress('0x1112dbcf805682e828606f74ab717abf4b4fd8de'),
+		isEnabled: true
+	},
 	[localhost.id]: {
 		...localhost,
 		safeUIURI: 'https://app.safe.global/home?safe=eth:',
@@ -58,4 +63,4 @@ const supportedTestNetworks: Chain[] = Object.values(CHAINS).filter(e => e.testn
 const networks: Chain[] = [...supportedNetworks, ...supportedTestNetworks];
 const supportedNetworksWithMainnet = [CHAINS[mainnet.id], ...supportedNetworks];
 
-export {CHAINS, isDev, networks, supportedNetworks, supportedNetworksWithMainnet,supportedTestNetworks};
+export {CHAINS, isDev, networks, supportedNetworks, supportedNetworksWithMainnet, supportedTestNetworks};

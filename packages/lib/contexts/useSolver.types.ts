@@ -3,6 +3,7 @@ import type {TNormalizedBN, TToken} from '@builtbymom/web3/types';
 import type {TTxStatus} from '@builtbymom/web3/utils/wagmi';
 import type {TTokenAmountInputElement} from '@lib/types/utils';
 import type {TPortalsEstimate} from '@lib/utils/api.portals';
+import type {LiFiStep} from '@lifi/sdk';
 import type {TYDaemonVault} from '@yearn-finance/web-lib/utils/schemas/yDaemonVaultsSchemas';
 
 /**************************************************************************************************
@@ -10,7 +11,7 @@ import type {TYDaemonVault} from '@yearn-finance/web-lib/utils/schemas/yDaemonVa
  *************************************************************************************************/
 export type TSolverContextBase = {
 	allowance: TNormalizedBN;
-	quote: TPortalsEstimate | null;
+	quote: TPortalsEstimate | LiFiStep | null;
 	isDisabled: boolean;
 	isApproved: boolean;
 	isFetchingAllowance: boolean;

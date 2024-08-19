@@ -31,7 +31,9 @@ const VaultsContext = createContext<TVaultsContext>({
 
 export const VaultsContextApp = memo(function VaultsContextApp({children}: {children: ReactElement}): ReactElement {
 	const {data: gimmeVaults, isLoading: isLoadingVaults} = useSWR<TYDaemonVault[]>(
-		'https://ydaemon.yearn.fi/vaults/gimme?chainIDs=137', // Persist on displaying polygon vaults
+		'https://ydaemon.yearn.fi/vaults/v3',
+		// 'https://ydaemon.yearn.fi/vaults/gimme?chainIDs=137',
+		// Persist on displaying polygon vaults
 		baseFetcher
 	);
 

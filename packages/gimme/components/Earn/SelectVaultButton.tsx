@@ -71,10 +71,12 @@ export function SelectOpportunityButton(props: {onSetOpportunity: (value: TYDaem
 										className={'mt-px'}
 									/>
 									<div className={'flex flex-col gap-1'}>
-										<TextTruncate
-											value={`${configuration.opportunity.name} Vault`}
-											className={'!text-grey-800 w-full text-left !text-lg font-medium'}
-										/>
+										<span
+											className={
+												'!text-grey-800 line-clamp-1 w-full text-left !text-lg font-medium'
+											}>
+											{configuration.opportunity.name} {'Vault'}
+										</span>
 
 										<p className={'text-grey-600 text-xs'}>
 											{`+${formatUSD(earnings).replace('$ ', '$')} over 1y`}

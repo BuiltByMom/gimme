@@ -88,7 +88,7 @@ export function WithdrawSolverContextApp({children}: {children: ReactElement}): 
 		}),
 		[vaultToken]
 	);
-	const portals = usePortalsSolver(vaultInputElementLike, configuration.tokenToReceive?.address, isZapNeeded);
+	const portals = usePortalsSolver(vaultInputElementLike, configuration.tokenToReceive?.address, isZapNeeded, false);
 	const vanila = useVanilaSolver(configuration.asset, configuration.vault, isZapNeeded, 'WITHDRAW');
 
 	const onResetWithdraw = (): void => {
