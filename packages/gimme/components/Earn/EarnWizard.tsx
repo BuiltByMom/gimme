@@ -1,4 +1,5 @@
 import {useCallback, useMemo, useState} from 'react';
+import {usePlausible} from 'next-plausible';
 import {isAddressEqual} from 'viem';
 import useWallet from '@builtbymom/web3/contexts/useWallet';
 import {useWeb3} from '@builtbymom/web3/contexts/useWeb3';
@@ -10,6 +11,7 @@ import {useVaults} from '@lib/contexts/useVaults';
 import {useIsZapNeeded} from '@lib/hooks/helpers/useIsZapNeeded';
 import {useCurrentChain} from '@lib/hooks/useCurrentChain';
 import {Button} from '@lib/primitives/Button';
+import {PLAUSIBLE_EVENTS} from '@lib/utils/plausible';
 
 import type {ReactElement} from 'react';
 
@@ -19,6 +21,7 @@ export function EarnWizard(): ReactElement {
 	const {configuration, onResetDeposit} = useDepositSolver();
 	const {vaults, vaultsArray} = useVaults();
 	const chain = useCurrentChain();
+	const plausible = usePlausible();
 
 	const [transactionResult, set_transactionResult] = useState<{isExecuted: boolean; message: ReactElement | null}>({
 		isExecuted: false,
@@ -113,12 +116,9 @@ export function EarnWizard(): ReactElement {
 		isApproved,
 		isFetchingAllowance,
 		approvalStatus,
-
 		onExecuteDeposit,
 		depositStatus,
-
 		onExecuteForGnosis,
-
 		isFetchingQuote,
 		quote
 	} = useDepositSolver();
@@ -139,15 +139,40 @@ export function EarnWizard(): ReactElement {
 		onResetDeposit();
 	}, [onResetDeposit]);
 
+	const onDepositSuccess = useCallback(() => {
+		plausible(PLAUSIBLE_EVENTS.DEPOSIT, {
+			props: {
+				vaultAddress: toAddress(configuration.opportunity?.address),
+				vaultName: configuration.opportunity?.name,
+				vaultChainID: configuration.opportunity?.chainID,
+				tokenAddress: toAddress(configuration.asset.token?.address),
+				tokenName: configuration.asset.token?.name,
+				isSwap: isZapNeeded,
+				tokenAmount: configuration.asset.amount
+			}
+		});
+		onRefreshTokens('DEPOSIT');
+	}, [
+		configuration.asset.amount,
+		configuration.asset.token?.address,
+		configuration.asset.token?.name,
+		configuration.opportunity?.address,
+		configuration.opportunity?.chainID,
+		configuration.opportunity?.name,
+		isZapNeeded,
+		onRefreshTokens,
+		plausible
+	]);
+
 	const onAction = useCallback(async () => {
 		if (isWalletSafe) {
-			return onExecuteForGnosis(() => onRefreshTokens('DEPOSIT'));
+			return onExecuteForGnosis(onDepositSuccess);
 		}
 		if (isApproved) {
-			return onExecuteDeposit(() => onRefreshTokens('DEPOSIT'));
+			return onExecuteDeposit(onDepositSuccess);
 		}
 		return onApprove(() => onRefreshTokens('APPROVE'));
-	}, [isApproved, isWalletSafe, onApprove, onExecuteDeposit, onExecuteForGnosis, onRefreshTokens]);
+	}, [isApproved, isWalletSafe, onApprove, onDepositSuccess, onExecuteDeposit, onExecuteForGnosis, onRefreshTokens]);
 
 	const isValid = useMemo((): boolean => {
 		if (isAboveBalance) {

@@ -59,6 +59,7 @@ export async function deposit(props: TDeposit): Promise<TTxResponse> {
 	return await handleTx(props, {
 		address: props.contractAddress,
 		abi: VAULT_ABI,
+		confirmation: 2,
 		functionName: 'deposit',
 		args: [props.amount, wagmiProvider.address]
 	});
