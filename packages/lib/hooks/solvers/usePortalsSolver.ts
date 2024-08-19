@@ -37,7 +37,10 @@ import type {TPortalsEstimate} from '@lib/utils/api.portals';
 export const usePortalsSolver = (
 	inputAsset: TTokenAmountInputElement,
 	outputTokenAddress: TAddress | undefined,
-	isZapNeeded: boolean
+	isZapNeeded: boolean,
+	slippage: string = '1',
+	deadline: number = 60,
+	withPermit: boolean = true
 ): TSolverContextBase => {
 	const {sdk} = useSafeAppsSDK();
 	const {address, provider, isWalletSafe} = useWeb3();
@@ -202,7 +205,7 @@ export const usePortalsSolver = (
 			assert(inputAsset.normalizedBigAmount, 'Input amount is not set');
 			assert(outputTokenAddress, 'Output token is not set');
 
-			const shouldUsePermit = await isPermitSupported({
+			const hasPermitSupported = await isPermitSupported({
 				contractAddress: inputAsset.token.address,
 				chainID: Number(inputAsset?.token.chainID),
 				options: {disableExceptions: true}
@@ -224,14 +227,14 @@ export const usePortalsSolver = (
 					return;
 				}
 
-				if (shouldUsePermit && approval.context.canPermit) {
+				if (hasPermitSupported && withPermit && approval.context.canPermit) {
 					set_approvalStatus({...approvalStatus, pending: true});
 					const signResult = await signPermit({
 						contractAddress: toAddress(inputAsset.token.address),
 						ownerAddress: toAddress(address),
 						spenderAddress: toAddress(approval.context.spender),
 						value: toBigInt(inputAsset.normalizedBigAmount?.raw),
-						deadline: BigInt(Math.floor(Date.now() / 1000) + 60 * 60),
+						deadline: BigInt(Math.floor(Date.now() / 1000) + 60 * deadline),
 						chainID: inputAsset.token.chainID
 					});
 
@@ -288,12 +291,14 @@ export const usePortalsSolver = (
 		[
 			address,
 			approvalStatus,
+			deadline,
 			inputAsset.normalizedBigAmount,
 			inputAsset.token,
 			outputTokenAddress,
 			permitSignature,
 			provider,
-			triggerRetreiveAllowance
+			triggerRetreiveAllowance,
+			withPermit
 		]
 	);
 
@@ -321,7 +326,7 @@ export const usePortalsSolver = (
 					inputToken: `${network}:${toAddress(inputToken)}`,
 					outputToken: `${network}:${toAddress(outputToken)}`,
 					inputAmount: toBigInt(inputAsset.normalizedBigAmount?.raw).toString(),
-					slippageTolerancePercentage: isStablecoin ? String(0.1) : String(1),
+					slippageTolerancePercentage: slippage,
 					validate: isWalletSafe ? 'false' : 'true',
 					permitSignature: permitSignature?.signature || undefined,
 					permitDeadline: permitSignature?.deadline ? permitSignature.deadline.toString() : undefined
@@ -394,7 +399,7 @@ export const usePortalsSolver = (
 		inputAsset.normalizedBigAmount?.raw,
 		outputTokenAddress,
 		address,
-		isStablecoin,
+		slippage,
 		isWalletSafe,
 		permitSignature
 	]);
@@ -442,7 +447,7 @@ export const usePortalsSolver = (
 					inputToken: `${network}:${toAddress(inputToken)}`,
 					outputToken: `${network}:${toAddress(outputToken)}`,
 					inputAmount: toBigInt(inputAsset.normalizedBigAmount?.raw).toString(),
-					slippageTolerancePercentage: isStablecoin ? String(0.1) : String(1),
+					slippageTolerancePercentage: slippage,
 					validate: isWalletSafe ? 'false' : 'true'
 				}
 			});
