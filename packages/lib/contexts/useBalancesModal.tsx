@@ -11,6 +11,7 @@ import {cl, isAddress, toAddress} from '@builtbymom/web3/utils';
 import {Dialog as HeadlessUiDialog, DialogPanel, Transition, TransitionChild} from '@headlessui/react';
 import {useDeepCompareEffect, useDeepCompareMemo} from '@react-hookz/web';
 import {FetchedTokenButton} from '@lib/common/FetchedTokenButton';
+import {NetworkSelector} from '@lib/common/NetworkSelector';
 import {TokenButton} from '@lib/common/TokenButton';
 import {usePopularTokens} from '@lib/contexts/usePopularTokens';
 import {usePrices} from '@lib/contexts/usePrices';
@@ -177,6 +178,7 @@ function BalancesModal(props: TBalancesCurtain): ReactElement {
 	const {address} = useWeb3();
 	const [searchValue, set_searchValue] = useState('');
 	const [filter, set_filter] = useState<'all' | 'stables' | 'other'>('all');
+	const [selectedChainId, set_selectedChainId] = useState(-1);
 	const {getIsStablecoin} = useGetIsStablecoin();
 	const {vaults} = useVaults();
 
@@ -291,6 +293,12 @@ function BalancesModal(props: TBalancesCurtain): ReactElement {
 		});
 	}, [filter, filteredVaultTokens, getIsStablecoin]);
 
+	const filteredByChain = filteredByCategory.filter(token => {
+		if (selectedChainId === -1) {
+			return true;
+		}
+		return token.chainID === selectedChainId;
+	});
 	return (
 		<BalancesModalWrapper
 			isOpen={props.isOpen}
@@ -313,36 +321,42 @@ function BalancesModal(props: TBalancesCurtain): ReactElement {
 					onChange={e => set_searchValue(e.target.value)}
 				/>
 
-				<div className={'mx-4 mt-2 flex gap-2'}>
-					<button
-						className={cl(
-							'text-grey-800 border-grey-200 hover:bg-grey-200 rounded-2xl border px-6 py-1 font-medium transition-all',
-							filter === 'all' ? 'border-grey-800' : ''
-						)}
-						onClick={() => set_filter('all')}>
-						{'All'}
-					</button>
-					<button
-						className={cl(
-							'text-grey-800 border-grey-200 hover:bg-grey-200 rounded-2xl border px-6 py-1 font-medium transition-all',
-							filter === 'stables' ? 'border-grey-800' : ''
-						)}
-						onClick={() => set_filter('stables')}>
-						{'Stables'}
-					</button>
-					<button
-						className={cl(
-							'text-grey-800 border-grey-200 hover:bg-grey-200 rounded-2xl border px-6 py-1 font-medium transition-all',
-							filter === 'other' ? 'border-grey-800' : ''
-						)}
-						onClick={() => set_filter('other')}>
-						{'Other'}
-					</button>
+				<div className={'mx-4 flex flex-wrap items-center justify-between gap-x-1 gap-y-2'}>
+					<div className={'mt-2 flex gap-2'}>
+						<button
+							className={cl(
+								'text-grey-800 border-grey-200 hover:bg-grey-200 rounded-2xl border px-6 py-1 font-medium transition-all',
+								filter === 'all' ? 'border-grey-800' : ''
+							)}
+							onClick={() => set_filter('all')}>
+							{'All'}
+						</button>
+						<button
+							className={cl(
+								'text-grey-800 border-grey-200 hover:bg-grey-200 rounded-2xl border px-6 py-1 font-medium transition-all',
+								filter === 'stables' ? 'border-grey-800' : ''
+							)}
+							onClick={() => set_filter('stables')}>
+							{'Stables'}
+						</button>
+						<button
+							className={cl(
+								'text-grey-800 border-grey-200 hover:bg-grey-200 rounded-2xl border px-6 py-1 font-medium transition-all',
+								filter === 'other' ? 'border-grey-800' : ''
+							)}
+							onClick={() => set_filter('other')}>
+							{'Other'}
+						</button>
+					</div>
+					<NetworkSelector
+						selectedChainId={selectedChainId}
+						onNetworkChange={set_selectedChainId}
+					/>
 				</div>
 
 				<div className={cl('scrollable flex flex-col items-center gap-2 pb-2')}>
 					<WalletLayout
-						filteredTokens={filteredByCategory}
+						filteredTokens={filteredByChain}
 						selectedTokens={props.selectedTokens}
 						onSelect={props.onSelect}
 						searchTokenAddress={searchTokenAddress}
@@ -426,7 +440,7 @@ export const BalancesModalContextApp = (props: TBalancesCurtainContextAppProps):
 	 ** user's chainID is 1 which would result in displaying the tokens for chain 1 instead of 10.
 	 *********************************************************************************************/
 	useEffect((): void => {
-		const allPopularTokens = listTokens(options.chainID);
+		const allPopularTokens = listTokens();
 		const allPopularTokensWithBalance = allPopularTokens.filter(e => e.balance.raw > 0n);
 		const noDuplicates: TToken[] = [];
 		for (const item of allPopularTokensWithBalance) {

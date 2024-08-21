@@ -1,4 +1,5 @@
 import {type ReactElement, useMemo} from 'react';
+import Image from 'next/image';
 import {useWeb3} from '@builtbymom/web3/contexts/useWeb3';
 import {useTokenList} from '@builtbymom/web3/contexts/WithTokenList';
 import {cl, formatAmount, isAddress, toBigInt, truncateHex} from '@builtbymom/web3/utils';
@@ -89,15 +90,28 @@ export function TokenButton(props: {
 			<div className={cl('flex w-full justify-between')}>
 				<div className={cl('flex w-full justify-between gap-2 items-center')}>
 					{props.token && isAddress(props.token.address) ? (
-						<ImageWithFallback
-							alt={props.token.symbol}
-							unoptimized
-							src={tokenIcon}
-							altSrc={`${process.env.SMOL_ASSETS_URL}/token/${props.token.chainID}/${props.token.address}/logo-32.png`}
-							quality={90}
-							width={32}
-							height={32}
-						/>
+						<div className={'relative'}>
+							<ImageWithFallback
+								alt={props.token.symbol}
+								unoptimized
+								src={tokenIcon}
+								altSrc={`${process.env.SMOL_ASSETS_URL}/token/${props.token.chainID}/${props.token.address}/logo-32.png`}
+								quality={90}
+								width={32}
+								height={32}
+							/>
+							<div
+								className={
+									'absolute -bottom-1 left-5 flex size-4 items-center justify-center rounded-full bg-white'
+								}>
+								<Image
+									width={14}
+									height={14}
+									alt={props.token.chainID.toString()}
+									src={`${process.env.SMOL_ASSETS_URL}/chain/${props.token.chainID}/logo.svg`}
+								/>
+							</div>
+						</div>
 					) : (
 						<div className={'bg-neutral-0 flex size-8 items-center justify-center rounded-full'}>
 							<IconWallet className={'size-4 text-neutral-600'} />

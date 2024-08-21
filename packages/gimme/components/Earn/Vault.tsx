@@ -50,26 +50,28 @@ export function Vault({
 				'cursor-pointer'
 			)}
 			onClick={onSelectVault}>
-			<div className={'relative flex items-center gap-4'}>
-				<ImageWithFallback
-					alt={token.symbol}
-					unoptimized
-					src={`${process.env.SMOL_ASSETS_URL}/token/${vault.chainID}/${token.address}/logo-128.png`}
-					altSrc={`${process.env.SMOL_ASSETS_URL}/token/${vault.chainID}/${token.address}/logo-128.png`}
-					quality={90}
-					width={32}
-					height={32}
-				/>
-				<div
-					className={
-						'absolute bottom-0.5 left-5 flex size-4 items-center justify-center rounded-full bg-white'
-					}>
-					<Image
-						width={14}
-						height={14}
-						alt={vault.chainID.toString()}
-						src={`${process.env.SMOL_ASSETS_URL}/chain/${vault.chainID}/logo.svg`}
+			<div className={'flex items-center gap-4'}>
+				<div className={'relative'}>
+					<ImageWithFallback
+						alt={token.symbol}
+						unoptimized
+						src={`${process.env.SMOL_ASSETS_URL}/token/${vault.chainID}/${token.address}/logo-128.png`}
+						altSrc={`${process.env.SMOL_ASSETS_URL}/token/${vault.chainID}/${token.address}/logo-128.png`}
+						quality={90}
+						width={32}
+						height={32}
 					/>
+					<div
+						className={
+							'absolute -bottom-1 left-5 flex size-4 items-center justify-center rounded-full bg-white'
+						}>
+						<Image
+							width={14}
+							height={14}
+							alt={vault.chainID.toString()}
+							src={`${process.env.SMOL_ASSETS_URL}/chain/${vault.chainID}/logo.svg`}
+						/>
+					</div>
 				</div>
 				<div className={'flex flex-col items-start gap-0.5 text-left'}>
 					<p className={'text-grey-900'}>
