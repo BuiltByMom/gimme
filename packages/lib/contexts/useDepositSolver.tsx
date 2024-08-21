@@ -78,7 +78,6 @@ export function DepositSolverContextApp({children}: {children: ReactElement}): R
 		configuration.asset,
 		configuration.opportunity,
 		isZapNeeded,
-
 		'DEPOSIT',
 		+deadline,
 		withPermit
@@ -112,11 +111,11 @@ export function DepositSolverContextApp({children}: {children: ReactElement}): R
 	};
 
 	const currentSolver = useMemo(() => {
-		if (isZapNeeded) {
-			return portals;
-		}
 		if (isBridgeNeeded) {
 			return lifi;
+		}
+		if (isZapNeeded) {
+			return portals;
 		}
 		return vanila;
 	}, [isBridgeNeeded, isZapNeeded, lifi, portals, vanila]);

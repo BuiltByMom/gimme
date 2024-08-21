@@ -47,8 +47,8 @@ export const useLifiSolver = (
 	 ** 3. Bridge is not needed for this configuration
 	 *********************************************************************************************/
 	const shouldDisableFetches = useMemo(() => {
-		return !inputAsset.token || !inputAsset.amount || !outputTokenAddress || !isBridgeNeeded;
-	}, [inputAsset.amount, inputAsset.token, isBridgeNeeded, outputTokenAddress]);
+		return !inputAsset.token || !inputAsset.amount || !outputTokenAddress || !isBridgeNeeded || !address;
+	}, [address, inputAsset.amount, inputAsset.token, isBridgeNeeded, outputTokenAddress]);
 
 	const onRetrieveQuote = useCallback(async () => {
 		if (
@@ -65,12 +65,13 @@ export const useLifiSolver = (
 			fromChain: inputAsset.token.chainID,
 			toChain: outputTokenChainId,
 			fromToken: inputAsset.token.address,
-			amount: spendAmount.toString(), // WETH amount
+			amount: spendAmount.toString(),
 			vaultAddress: outputTokenAddress,
 			vaultAsset: outputVaultAsset?.address,
-			depositGas: '100000', // e.g. https://polygonscan.com/tx/0xcaf0322cc1ef9e1a0d9049733752f602fb50018c15c04926ea8ecf8c7b39a022
+			depositGas: '100000',
 			depositContractAbi: ['function deposit(uint amount, address to) external']
 		};
+
 		set_isFetchingQuote(true);
 
 		const depositTxData = encodeFunctionData({
@@ -99,12 +100,14 @@ export const useLifiSolver = (
 
 		try {
 			const contactCallsQuoteResponse = await getContractCallsQuote(contractCallsQuoteRequest);
+
 			if (contactCallsQuoteResponse) {
 				set_latestQuote(contactCallsQuoteResponse);
 				set_isFetchingQuote(false);
 				return contactCallsQuoteResponse;
 			}
 		} catch (e) {
+			set_latestQuote(undefined);
 			console.error(e);
 		}
 		set_isFetchingQuote(false);
@@ -135,25 +138,19 @@ export const useLifiSolver = (
 		}
 
 		set_isFetchingAllowance(true);
-		console.log({
-			chainId: outputTokenChainId,
-			abi: erc20Abi,
-			address: toAddress(inputAsset.token.address),
-			functionName: 'allowance',
-			args: [toAddress(address), toAddress(outputTokenAddress)]
-		});
+
 		const allowance = await readContract(retrieveConfig(), {
-			chainId: outputTokenChainId,
+			chainId: inputAsset.token.chainID,
 			abi: erc20Abi,
 			address: toAddress(inputAsset.token.address),
 			functionName: 'allowance',
-			args: [toAddress(address), toAddress(outputTokenAddress)]
+			args: [toAddress(address), toAddress(latestQuote.estimate.approvalAddress)]
 		});
 
 		set_isFetchingAllowance(false);
 
 		return toNormalizedBN(allowance, inputAsset.token.decimals);
-	}, [address, inputAsset.token, latestQuote, outputTokenAddress, outputTokenChainId, spendAmount]);
+	}, [address, inputAsset.token, latestQuote, outputTokenAddress, spendAmount]);
 
 	const triggerRetreiveAllowance = useAsyncTrigger(async (): Promise<void> => {
 		if (shouldDisableFetches) {
@@ -203,18 +200,17 @@ export const useLifiSolver = (
 		try {
 			set_depositStatus({...defaultTxStatus, pending: true});
 
-			const {value, to, data, maxFeePerGas} = latestQuote?.transactionRequest || {};
+			const {value, to, data, gasLimit, gasPrice} = latestQuote?.transactionRequest || {};
 			const wagmiProvider = await toWagmiProvider(provider);
 
 			assert(isHex(data), 'Data is not hex');
 			assert(wagmiProvider.walletClient, 'Wallet client is not set');
-
 			const hash = await sendTransaction(retrieveConfig(), {
 				value: toBigInt(value ?? 0),
 				to: toAddress(to),
 				data,
-				chainId: inputAsset.token.chainID,
-				maxFeePerGas: toBigInt(maxFeePerGas)
+				gas: gasLimit ? BigInt(gasLimit as string) : undefined,
+				gasPrice: gasPrice ? BigInt(gasPrice as string) : undefined
 			});
 
 			const receipt = await waitForTransactionReceipt(retrieveConfig(), {

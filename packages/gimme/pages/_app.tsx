@@ -37,8 +37,8 @@ function MyApp(props: AppProps): ReactElement {
 			/>
 			<WithMom
 				supportedChains={supportedNetworksWithMainnet}
-				defaultNetwork={supportedNetworks[0]}
-				tokenLists={['https://raw.githubusercontent.com/SmolDapp/tokenLists/main/lists/137/yearn-min.json']}>
+				// tokenLists={['https://raw.githubusercontent.com/SmolDapp/tokenLists/main/lists/137/yearn-min.json']}
+				defaultNetwork={supportedNetworks[0]}>
 				<WalletContextApp>
 					<WithPopularTokens>
 						<WithPrices supportedNetworks={supportedNetworks}>
