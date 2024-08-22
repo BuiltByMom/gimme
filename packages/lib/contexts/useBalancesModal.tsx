@@ -321,11 +321,11 @@ function BalancesModal(props: TBalancesCurtain): ReactElement {
 					onChange={e => set_searchValue(e.target.value)}
 				/>
 
-				<div className={'mx-4 flex flex-wrap items-center justify-between gap-x-1 gap-y-2'}>
-					<div className={'mt-2 flex gap-2'}>
+				<div className={'mx-4 mt-2 flex flex-wrap items-center justify-between gap-x-1 gap-y-2'}>
+					<div className={'flex gap-2'}>
 						<button
 							className={cl(
-								'text-grey-800 border-grey-200 hover:bg-grey-200 rounded-2xl border px-6 py-1 font-medium transition-all',
+								'text-grey-800 border-grey-200 hover:bg-grey-200 rounded-2xl border px-6 py-2 font-medium transition-all',
 								filter === 'all' ? 'border-grey-800' : ''
 							)}
 							onClick={() => set_filter('all')}>

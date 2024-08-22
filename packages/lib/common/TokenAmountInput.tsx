@@ -4,12 +4,11 @@ import InputNumber from 'rc-input-number';
 import {useWeb3} from '@builtbymom/web3/contexts/useWeb3';
 import {useTokenList} from '@builtbymom/web3/contexts/WithTokenList';
 import {cl, formatAmount, formatCounterValue, percentOf, toAddress, zeroNormalizedBN} from '@builtbymom/web3/utils';
-import {useDeepCompareEffect, useUpdateEffect} from '@react-hookz/web';
+import {useDeepCompareEffect} from '@react-hookz/web';
 import {ImageWithFallback} from '@lib/common/ImageWithFallback';
 import {TextTruncate} from '@lib/common/TextTruncate';
 import {useBalancesModal} from '@lib/contexts/useBalancesModal';
 import {usePrices} from '@lib/contexts/usePrices';
-import {useCurrentChain} from '@lib/hooks/useCurrentChain';
 import {useValidateAmountInput} from '@lib/hooks/useValidateAmountInput';
 import {IconChevron} from '@lib/icons/IconChevron';
 import {handleLowAmount} from '@lib/utils/helpers';
@@ -39,7 +38,6 @@ export function TokenAmountInput({
 	const {onOpenCurtain} = useBalancesModal();
 	const {getPrice, pricingHash} = usePrices();
 	const {getToken} = useTokenList();
-	const chain = useCurrentChain();
 	const {address} = useWeb3();
 
 	const [isFocused, set_isFocused] = useState<boolean>(false);
@@ -192,13 +190,6 @@ export function TokenAmountInput({
 		}
 		onSetValue(result);
 	}, [result]);
-
-	/**********************************************************************************************
-	 ** Remove selected token on network change,
-	 *********************************************************************************************/
-	useUpdateEffect(() => {
-		validate(value.amount, undefined);
-	}, [chain.id]);
 
 	return (
 		<div className={'relative size-full rounded-lg'}>

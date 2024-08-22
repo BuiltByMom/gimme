@@ -15,7 +15,7 @@ import {
 import {approveERC20, defaultTxStatus, retrieveConfig} from '@builtbymom/web3/utils/wagmi';
 import {useSafeAppsSDK} from '@gnosis.pm/safe-apps-react-sdk';
 import {TransactionStatus} from '@gnosis.pm/safe-apps-sdk';
-import {readContract} from '@wagmi/core';
+import {readContract, switchChain} from '@wagmi/core';
 import {isPermitSupported, signPermit} from '@lib/hooks/usePermit';
 import {YEARN_4626_ROUTER_ABI} from '@lib/utils/abi/yearn4626Router.abi';
 import {deposit, depositViaRouter, redeemV3Shares, withdrawShares} from '@lib/utils/actions';
@@ -38,7 +38,7 @@ export const useVanilaSolver = (
 	deadline: number = 60,
 	withPermit: boolean = true
 ): TSolverContextBase => {
-	const {provider, address} = useWeb3();
+	const {provider, address, chainID} = useWeb3();
 	const {sdk} = useSafeAppsSDK();
 	const [isFetchingAllowance, set_isFetchingAllowance] = useState(false);
 	const [approvalStatus, set_approvalStatus] = useState<TTxStatus>(defaultTxStatus);
@@ -119,6 +119,12 @@ export const useVanilaSolver = (
 					isV3Vault &&
 					isAddress(CHAINS[inputAsset.token.chainID].yearnRouterAddress)
 				) {
+					/**************************************************************************
+					 ** We need to switch chain manually before signing the permit
+					 **************************************************************************/
+					if (chainID !== inputAsset.token.chainID) {
+						await switchChain(retrieveConfig(), {chainId: inputAsset.token.chainID});
+					}
 					const signResult = await signPermit({
 						contractAddress: inputAsset.token.address,
 						ownerAddress: toAddress(address),
@@ -166,6 +172,7 @@ export const useVanilaSolver = (
 			vault?.address,
 			withPermit,
 			isV3Vault,
+			chainID,
 			address,
 			deadline,
 			approvalStatus,
@@ -366,4 +373,3 @@ export const useVanilaSolver = (
 		onApprove
 	};
 };
-

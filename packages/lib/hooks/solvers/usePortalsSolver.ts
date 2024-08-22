@@ -44,7 +44,8 @@ export const usePortalsSolver = (
 	withPermit: boolean = true
 ): TSolverContextBase => {
 	const {sdk} = useSafeAppsSDK();
-	const {address, provider, isWalletSafe} = useWeb3();
+	const {address, provider, isWalletSafe, chainID} = useWeb3();
+
 	const [approvalStatus, set_approvalStatus] = useState(defaultTxStatus);
 	const [depositStatus, set_depositStatus] = useState(defaultTxStatus);
 	const [allowance, set_allowance] = useState<TNormalizedBN>(zeroNormalizedBN);
@@ -227,6 +228,13 @@ export const usePortalsSolver = (
 
 				if (hasPermitSupported && withPermit && approval.context.canPermit) {
 					set_approvalStatus({...approvalStatus, pending: true});
+
+					/**************************************************************************
+					 ** We need to switch chain manually before signing the permit
+					 **************************************************************************/
+					if (chainID !== inputAsset.token.chainID) {
+						await switchChain(retrieveConfig(), {chainId: inputAsset.token.chainID});
+					}
 					const signResult = await signPermit({
 						contractAddress: toAddress(inputAsset.token.address),
 						ownerAddress: toAddress(address),
@@ -289,6 +297,7 @@ export const usePortalsSolver = (
 		[
 			address,
 			approvalStatus,
+			chainID,
 			deadline,
 			inputAsset.normalizedBigAmount,
 			inputAsset.token,
