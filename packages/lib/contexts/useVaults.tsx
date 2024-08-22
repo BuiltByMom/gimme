@@ -61,7 +61,6 @@ export const VaultsContextApp = memo(function VaultsContextApp({children}: {chil
 	const {getStakingTokenBalance} = useStakingTokens(gimmeVaultsDict);
 	const userVaults = useMemo(() => {
 		const result: TDict<TYDaemonVault> = {};
-		// console.log(getBalance({address: eachToken.address, chainID: vault.chainID}));
 		for (const eachNetwork of Object.values(balances)) {
 			for (const eachToken of Object.values(eachNetwork)) {
 				const vault = gimmeVaultsDict[toAddress(eachToken.address)];
