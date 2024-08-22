@@ -28,7 +28,7 @@ export const useLifiSolver = (
 	outputVaultAsset: TToken | undefined,
 
 	isBridgeNeeded: boolean
-): TSolverContextBase => {
+): TSolverContextBase<LiFiStep | null> => {
 	const {address, provider} = useWeb3();
 	const [approvalStatus, set_approvalStatus] = useState(defaultTxStatus);
 	const [depositStatus, set_depositStatus] = useState(defaultTxStatus);

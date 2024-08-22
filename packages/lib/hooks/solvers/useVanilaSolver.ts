@@ -37,7 +37,7 @@ export const useVanilaSolver = (
 	contextActions: 'DEPOSIT' | 'WITHDRAW',
 	deadline: number = 60,
 	withPermit: boolean = true
-): TSolverContextBase => {
+): TSolverContextBase<null> => {
 	const {provider, address, chainID} = useWeb3();
 	const {sdk} = useSafeAppsSDK();
 	const [isFetchingAllowance, set_isFetchingAllowance] = useState(false);

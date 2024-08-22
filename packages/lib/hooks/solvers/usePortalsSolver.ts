@@ -42,7 +42,7 @@ export const usePortalsSolver = (
 	slippage: string = '1',
 	deadline: number = 60,
 	withPermit: boolean = true
-): TSolverContextBase => {
+): TSolverContextBase<TPortalsEstimate | null> => {
 	const {sdk} = useSafeAppsSDK();
 	const {address, provider, isWalletSafe, chainID} = useWeb3();
 

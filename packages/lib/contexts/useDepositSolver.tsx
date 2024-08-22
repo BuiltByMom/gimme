@@ -11,19 +11,25 @@ import {getNewInput} from '@lib/utils/helpers';
 
 import type {ReactElement} from 'react';
 import type {TToken} from '@builtbymom/web3/types';
+import type {TPortalsEstimate} from '@lib/utils/api.portals';
+import type {LiFiStep} from '@lifi/sdk';
 import type {TDepositActions, TDepositConfiguration, TDepositSolverContext} from './useSolver.types';
 
-const defaultProps: TDepositSolverContext = {
+type TQuote = TPortalsEstimate | LiFiStep | null;
+
+type TWithrawSolver = TDepositSolverContext<TQuote>;
+
+const defaultProps: TWithrawSolver = {
 	isDisabled: false,
 	isApproved: false,
 	isFetchingAllowance: false,
 	isFetchingQuote: false,
 	isDeposited: false,
+	quote: null,
 	allowance: zeroNormalizedBN,
 	approvalStatus: defaultTxStatus,
 	withdrawStatus: defaultTxStatus,
 	depositStatus: defaultTxStatus,
-	quote: null,
 	configuration: {
 		asset: getNewInput(),
 		opportunity: undefined
@@ -38,7 +44,7 @@ const defaultProps: TDepositSolverContext = {
 	dispatchConfiguration: (): void => undefined
 };
 
-const DepositSolverContext = createContext<TDepositSolverContext>(defaultProps);
+const DepositSolverContext = createContext<TWithrawSolver>(defaultProps);
 
 const configurationReducer = (state: TDepositConfiguration, action: TDepositActions): TDepositConfiguration => {
 	switch (action.type) {
@@ -133,4 +139,4 @@ export function DepositSolverContextApp({children}: {children: ReactElement}): R
 		</DepositSolverContext.Provider>
 	);
 }
-export const useDepositSolver = (): TDepositSolverContext => useContext(DepositSolverContext);
+export const useDepositSolver = (): TWithrawSolver => useContext(DepositSolverContext);
