@@ -3,7 +3,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import {type Router, useRouter} from 'next/router';
 import {usePlausible} from 'next-plausible';
-import {arbitrum, polygon} from 'wagmi/chains';
+import {arbitrum, mainnet, polygon} from 'wagmi/chains';
 import {useWeb3} from '@builtbymom/web3/contexts/useWeb3';
 import {cl, truncateHex} from '@builtbymom/web3/utils';
 import {useAccountModal} from '@rainbow-me/rainbowkit';
@@ -89,7 +89,7 @@ function WalletSection(): ReactElement {
 				'flex items-center justify-center gap-3 rounded-2xl border border-white bg-white/60 py-0 pl-2 backdrop-blur-md md:border-none md:bg-transparent md:p-0',
 				'md:py-2 md:backdrop-filter-none'
 			)}>
-			<NetworkPopoverSelector networks={[polygon, arbitrum]} />
+			<NetworkPopoverSelector networks={[polygon, arbitrum, mainnet]} />
 			<button
 				onClick={(): void => {
 					openAccountModal?.();

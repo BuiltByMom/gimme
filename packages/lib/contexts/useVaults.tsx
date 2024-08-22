@@ -31,8 +31,8 @@ const VaultsContext = createContext<TVaultsContext>({
 
 export const VaultsContextApp = memo(function VaultsContextApp({children}: {children: ReactElement}): ReactElement {
 	const {data: gimmeVaults, isLoading: isLoadingVaults} = useSWR<TYDaemonVault[]>(
-		// 'https://ydaemon.yearn.fi/vaults/v3',
-		'https://ydaemon.yearn.fi/vaults/gimme?chainIDs=137',
+		'https://ydaemon.yearn.fi/vaults/v3',
+		// 'https://ydaemon.yearn.fi/vaults/gimme?chainIDs=137',
 		// Persist on displaying polygon vaults
 		baseFetcher
 	);
@@ -59,24 +59,23 @@ export const VaultsContextApp = memo(function VaultsContextApp({children}: {chil
 
 	const {balances, isLoading: isLoadingBalance, getBalance} = useWallet();
 	const {getStakingTokenBalance} = useStakingTokens(gimmeVaultsDict);
-
 	const userVaults = useMemo(() => {
 		const result: TDict<TYDaemonVault> = {};
-		for (const [networkID, eachNetwork] of Object.entries(balances)) {
+		// console.log(getBalance({address: eachToken.address, chainID: vault.chainID}));
+		for (const eachNetwork of Object.values(balances)) {
 			for (const eachToken of Object.values(eachNetwork)) {
 				const vault = gimmeVaultsDict[toAddress(eachToken.address)];
 				if (!vault) {
 					continue;
 				}
-
 				let totalBalance = 0n;
-				const balance = getBalance({address: eachToken.address, chainID: Number(networkID)});
+				const balance = getBalance({address: eachToken.address, chainID: vault.chainID});
 				totalBalance += balance.raw;
 
 				if (vault.staking.available) {
 					const stakingBalance = getStakingTokenBalance({
 						address: vault.staking.address,
-						chainID: Number(networkID)
+						chainID: vault.chainID
 					});
 					totalBalance += stakingBalance.raw;
 				}
