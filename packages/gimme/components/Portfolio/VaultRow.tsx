@@ -1,5 +1,6 @@
 import {type ReactElement} from 'react';
 import toast from 'react-hot-toast';
+import Image from 'next/image';
 import {useRouter} from 'next/router';
 import {usePlausible} from 'next-plausible';
 import {useAccount, useSwitchChain} from 'wagmi';
@@ -90,15 +91,28 @@ export function VaultRow(props: {
 				'border-grey-200 grid w-full grid-cols-1 justify-between gap-y-4 rounded-2xl border p-6 md:grid-cols-12'
 			}>
 			<div className={'col-span-5 flex min-w-[236px] items-center gap-4'}>
-				<ImageWithFallback
-					alt={props.vault.token.symbol}
-					unoptimized
-					src={`${process.env.SMOL_ASSETS_URL}/token/${props.vault.chainID}/${props.vault.token.address}/logo-128.png`}
-					altSrc={`${process.env.SMOL_ASSETS_URL}/token/${props.vault.chainID}/${props.vault.token.address}/logo-128.png`}
-					quality={90}
-					width={40}
-					height={40}
-				/>
+				<div className={'relative'}>
+					<ImageWithFallback
+						alt={props.vault.token.symbol}
+						unoptimized
+						src={`${process.env.SMOL_ASSETS_URL}/token/${props.vault.chainID}/${props.vault.token.address}/logo-128.png`}
+						altSrc={`${process.env.SMOL_ASSETS_URL}/token/${props.vault.chainID}/${props.vault.token.address}/logo-128.png`}
+						quality={90}
+						width={40}
+						height={40}
+					/>
+					<div
+						className={
+							'absolute -bottom-1 left-6 flex size-4 items-center justify-center rounded-full bg-white'
+						}>
+						<Image
+							width={14}
+							height={14}
+							alt={props.vault.chainID.toString()}
+							src={`${process.env.SMOL_ASSETS_URL}/chain/${props.vault.chainID}/logo.svg`}
+						/>
+					</div>
+				</div>
 				<div>
 					<p className={'font-bold'}>{props.vault.name}</p>
 					<div className={'flex items-center gap-1 text-xs'}>
