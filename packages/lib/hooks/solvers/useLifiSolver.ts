@@ -108,6 +108,7 @@ export const useLifiSolver = (
 
 		try {
 			const allRoutes = await getRoutes(routesRequest);
+			console.log(allRoutes);
 			const recommendedRoute = allRoutes.routes.find(route => route.tags?.includes('RECOMMENDED'));
 
 			const contactCallsQuoteResponse = await getContractCallsQuote({

@@ -1,7 +1,7 @@
 /* eslint-disable object-curly-newline */
 'use client';
 
-import {arbitrum, mainnet, polygon} from 'viem/chains';
+import {base, mainnet, polygon} from 'viem/chains';
 import {toAddress} from '@builtbymom/web3/utils';
 import {localhost} from '@builtbymom/web3/utils/wagmi';
 
@@ -39,12 +39,21 @@ const CHAINS: TSmolChains = {
 		yearnRouterAddress: toAddress('0x1112dbcf805682e828606f74ab717abf4b4fd8de'),
 		isEnabled: true
 	},
-	[arbitrum.id]: {
-		...arbitrum,
-		safeAPIURI: 'https://safe-transaction-arbitrum.safe.global',
-		safeUIURI: 'https://app.safe.global/home?safe=matic:',
-		coingeckoGasCoinID: 'arbitrum',
-		llamaChainName: 'arbitrum',
+	// [arbitrum.id]: {
+	// 	...arbitrum,
+	// 	safeAPIURI: 'https://safe-transaction-arbitrum.safe.global',
+	// 	safeUIURI: 'https://app.safe.global/home?safe=matic:',
+	// 	coingeckoGasCoinID: 'arbitrum',
+	// 	llamaChainName: 'arbitrum',
+	// 	yearnRouterAddress: toAddress('0x1112dbcf805682e828606f74ab717abf4b4fd8de'),
+	// 	isEnabled: true
+	// },
+	[base.id]: {
+		...base,
+		safeAPIURI: 'https://safe-transaction-base.safe.global',
+		safeUIURI: 'https://app.safe.global/home?safe=base:',
+		coingeckoGasCoinID: 'ethereum',
+		llamaChainName: 'base',
 		yearnRouterAddress: toAddress('0x1112dbcf805682e828606f74ab717abf4b4fd8de'),
 		isEnabled: true
 	},
