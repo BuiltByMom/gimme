@@ -141,7 +141,8 @@ export function WithdrawButton(props: {onClose: () => void}): ReactElement {
 					tokenAddress: toAddress(token?.address),
 					tokenName: token?.name,
 					isSwap: isZapNeeded,
-					tokenAmount: configuration.asset.amount
+					tokenAmount: configuration.asset.amount,
+					action: `Withdraw ${configuration.asset.amount} ${vault?.symbol} -> ${token?.symbol} on chain ${vault?.chainID}`
 				}
 			};
 	}, [configuration, isZapNeeded, plausible]);

@@ -148,7 +148,9 @@ export function EarnWizard(): ReactElement {
 				tokenAddress: toAddress(configuration.asset.token?.address),
 				tokenName: configuration.asset.token?.name,
 				isSwap: isZapNeeded,
-				tokenAmount: configuration.asset.amount
+				tokenAmount: configuration.asset.amount,
+				action: `Deposit ${configuration.asset.amount} ${configuration.asset.token?.symbol} -> ${configuration.opportunity?.symbol} on chain ${configuration.opportunity?.chainID}`
+
 			}
 		});
 		onRefreshTokens('DEPOSIT');

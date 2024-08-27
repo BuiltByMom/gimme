@@ -133,8 +133,11 @@ export async function getPortalsEstimate({params}: TGetEstimateProps): Promise<{
 	params.inputToken = params.inputToken.toLowerCase().replaceAll(ETH_TOKEN_ADDRESS.toLowerCase(), ZERO_ADDRESS);
 	params.outputToken = params.outputToken.toLowerCase().replaceAll(ETH_TOKEN_ADDRESS.toLowerCase(), ZERO_ADDRESS);
 
+	const urlParams = new URLSearchParams(params);
+	urlParams.delete('sender', toAddress(zeroAddress));
+
 	const result = await fetch<TPortalsEstimate>({
-		endpoint: `${url}?${new URLSearchParams(params)}`,
+		endpoint: `${url}?${urlParams}`,
 		schema: portalsEstimateResponseSchema
 	});
 
@@ -192,9 +195,11 @@ export async function getPortalsTx({params}: TGetTransactionProps): Promise<{
 
 export async function getPortalsApproval({params}: TGetApprovalProps): TFetchReturn<TPortalsApproval> {
 	const url = `${BASE_URL}/approval`;
+	const urlParams = new URLSearchParams(params);
+	urlParams.delete('sender', toAddress(zeroAddress));
 
 	return fetch<TPortalsApproval>({
-		endpoint: `${url}?${new URLSearchParams(params)}`,
+		endpoint: `${url}?${urlParams}`,
 		schema: portalsApprovalSchema
 	});
 }

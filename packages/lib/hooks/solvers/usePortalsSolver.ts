@@ -70,7 +70,6 @@ export const usePortalsSolver = (
 	}, [inputAsset.amount, inputAsset.token, isBridgeNeeded, isZapNeeded, outputTokenAddress]);
 
 	const {getIsStablecoin} = useGetIsStablecoin();
-
 	const onRetrieveQuote = useCallback(async () => {
 		if (!inputAsset.token || !outputTokenAddress || inputAsset.normalizedBigAmount === zeroNormalizedBN) {
 			return;
@@ -127,9 +126,12 @@ export const usePortalsSolver = (
 			if (inputAsset.normalizedBigAmount.raw === zeroNormalizedBN.raw) {
 				return zeroNormalizedBN;
 			}
-
 			const inputToken = inputAsset.token.address;
 			const outputToken = outputTokenAddress;
+
+			if (isZeroAddress(inputToken) || isZeroAddress(outputToken) || isZeroAddress(address)) {
+				return zeroNormalizedBN;
+			}
 
 			if (isEthAddress(inputToken)) {
 				return toNormalizedBN(MAX_UINT_256, 18);
@@ -529,10 +531,10 @@ export const usePortalsSolver = (
 			inputAsset.normalizedBigAmount?.raw,
 			outputTokenAddress,
 			address,
-			slippage,
 			isWalletSafe,
 			sdk.txs,
-			permitSignature
+			permitSignature,
+			slippage
 		]
 	);
 
