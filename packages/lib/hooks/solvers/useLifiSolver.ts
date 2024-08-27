@@ -12,14 +12,14 @@ import {
 	zeroNormalizedBN
 } from '@builtbymom/web3/utils';
 import {approveERC20, defaultTxStatus, retrieveConfig, toWagmiProvider} from '@builtbymom/web3/utils/wagmi';
-import {getContractCallsQuote, getRoutes} from '@lifi/sdk';
+import {getContractCallsQuote, getQuote} from '@lifi/sdk';
 import {readContract, sendTransaction, waitForTransactionReceipt} from '@wagmi/core';
 
 import type {TAddress, TNormalizedBN, TToken} from '@builtbymom/web3/types';
 import type {TTxResponse} from '@builtbymom/web3/utils/wagmi';
 import type {TSolverContextBase} from '@lib/contexts/useSolver.types';
 import type {TTokenAmountInputElement} from '@lib/types/utils';
-import type {ContractCallsQuoteRequest, LiFiStep, RoutesRequest} from '@lifi/sdk';
+import type {ContractCallsQuoteRequest, LiFiStep, QuoteRequest} from '@lifi/sdk';
 
 export const useLifiSolver = (
 	inputAsset: TTokenAmountInputElement,
@@ -80,14 +80,6 @@ export const useLifiSolver = (
 			args: [config.amount, address]
 		});
 
-		const routesRequest: RoutesRequest = {
-			fromChainId: inputAsset.token.chainID,
-			toChainId: outputTokenChainId,
-			fromTokenAddress: inputAsset.token.address,
-			toTokenAddress: outputVaultAsset?.address,
-			fromAmount: spendAmount.toString()
-		};
-
 		const contractCallsQuoteRequest: ContractCallsQuoteRequest = {
 			fromChain: config.fromChain,
 			fromToken: config.fromToken,
@@ -106,22 +98,37 @@ export const useLifiSolver = (
 			]
 		};
 
+		const quoteRequest: QuoteRequest = {
+			fromChain: inputAsset.token.chainID,
+			toChain: outputTokenChainId,
+			fromToken: inputAsset.token.address,
+			toToken: outputVaultAsset?.address,
+			fromAmount: spendAmount.toString(),
+			fromAddress: toAddress(address)
+		};
+
 		try {
-			const allRoutes = await getRoutes(routesRequest);
-			console.log(allRoutes);
-			const recommendedRoute = allRoutes.routes.find(route => route.tags?.includes('RECOMMENDED'));
+			const quote = await getQuote(quoteRequest);
+			const {toAmountMin} = quote.estimate;
+			const steps = [100, 99, 98, 97, 95];
+			let contactCallsQuoteResponse: LiFiStep | undefined = undefined;
 
-			const contactCallsQuoteResponse = await getContractCallsQuote({
-				...contractCallsQuoteRequest,
-				contractCalls: [
-					{
-						...contractCallsQuoteRequest.contractCalls[0],
-						fromAmount: recommendedRoute?.toAmount || spendAmount.toString()
-					}
-				],
-				toAmount: spendAmount.toString()
-			});
-
+			for (const step of steps) {
+				const scaledAmountToTry = (BigInt(step) * BigInt(toAmountMin)) / 100n;
+				contactCallsQuoteResponse = await getContractCallsQuote({
+					...contractCallsQuoteRequest,
+					toAmount: scaledAmountToTry.toString(),
+					contractCalls: [
+						{
+							...contractCallsQuoteRequest.contractCalls[0],
+							fromAmount: scaledAmountToTry.toString()
+						}
+					]
+				});
+				if (toBigInt(contactCallsQuoteResponse.estimate.fromAmount) <= spendAmount) {
+					break;
+				}
+			}
 			if (contactCallsQuoteResponse) {
 				set_latestQuote(contactCallsQuoteResponse);
 				set_isFetchingQuote(false);
