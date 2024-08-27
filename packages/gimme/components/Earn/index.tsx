@@ -121,11 +121,8 @@ export function Earn(): ReactElement {
 	}, [configuration.asset.token?.symbol, configuration.opportunity?.token.symbol, isFetchingQuote, quote]);
 
 	return (
-		<div className={'relative'}>
-			<div
-				className={cl(
-					'relative w-full overflow-hidden max-w-[560px] z-20 flex flex-col items-center gap-10 rounded-3xl'
-				)}>
+		<div className={'relative w-full max-w-[560px]'}>
+			<div className={cl('relative w-full overflow-hidden z-20 flex flex-col items-center gap-10 rounded-3xl')}>
 				<div className={'border-grey-200 w-full rounded-3xl border bg-white p-4 md:p-6'}>
 					<div className={cl('flex w-full flex-col gap-2')}>
 						<TokenAmountInput
