@@ -113,7 +113,7 @@ export function TokenButton(props: {
 							</div>
 						</div>
 					) : (
-						<div className={'bg-neutral-0 flex size-8 items-center justify-center rounded-full'}>
+						<div className={'flex size-8 items-center justify-center rounded-full bg-white'}>
 							<IconWallet className={'size-4 text-neutral-600'} />
 						</div>
 					)}

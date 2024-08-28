@@ -153,17 +153,20 @@ export function TokenAmountInput({
 	};
 
 	const onSelectToken = useCallback(() => {
-		onOpenCurtain(token => {
-			validate(
-				value.amount === '0' ? '' : value.amount,
-				token,
-				token.balance.raw === 0n ? undefined : token.balance
-			);
-			plausible(PLAUSIBLE_EVENTS.SELECT_TOKEN, {
-				props: {tokenAddress: toAddress(token.address), tokenName: token.name, tokenChainId: token.chainID}
-			});
-		});
-	}, [onOpenCurtain, plausible, validate, value.amount]);
+		onOpenCurtain(
+			token => {
+				validate(
+					value.amount === '0' ? '' : value.amount,
+					token,
+					token.balance.raw === 0n ? undefined : token.balance
+				);
+				plausible(PLAUSIBLE_EVENTS.SELECT_TOKEN, {
+					props: {tokenAddress: toAddress(token.address), tokenName: token.name, tokenChainId: token.chainID}
+				});
+			},
+			{highlightedTokens: selectedToken ? [selectedToken] : []}
+		);
+	}, [onOpenCurtain, plausible, selectedToken, validate, value.amount]);
 
 	/**********************************************************************************************
 	 ** The tokenIcon memoized value contains the URL of the token icon. Based on the provided

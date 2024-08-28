@@ -9,16 +9,16 @@ import {useWeb3} from '@builtbymom/web3/contexts/useWeb3';
 import {useTokenList} from '@builtbymom/web3/contexts/WithTokenList';
 import {cl, isAddress, toAddress} from '@builtbymom/web3/utils';
 import {Dialog as HeadlessUiDialog, DialogPanel, Transition, TransitionChild} from '@headlessui/react';
+import * as Popover from '@radix-ui/react-popover';
 import {useDeepCompareEffect, useDeepCompareMemo} from '@react-hookz/web';
 import {FetchedTokenButton} from '@lib/common/FetchedTokenButton';
 import {NetworkSelector} from '@lib/common/NetworkSelector';
+import {SimplePopover} from '@lib/common/SimplePopover';
 import {TokenButton} from '@lib/common/TokenButton';
 import {usePopularTokens} from '@lib/contexts/usePopularTokens';
 import {usePrices} from '@lib/contexts/usePrices';
 import {useVaults} from '@lib/contexts/useVaults';
-import {useWithdrawSolver} from '@lib/contexts/useWithdrawSolver';
 import {useGetIsStablecoin} from '@lib/hooks/helpers/useGetIsStablecoin';
-import {useCurrentChain} from '@lib/hooks/useCurrentChain';
 import {useTokensWithBalance} from '@lib/hooks/useTokensWithBalance';
 import {IconCross} from '@lib/icons/IconCross';
 import {IconLoader} from '@lib/icons/IconLoader';
@@ -48,14 +48,14 @@ const defaultProps: TBalancesCurtainContextProps = {
  *************************************************************************************************/
 function WalletLayout(props: TWalletLayoutProps): ReactNode {
 	const {addCustomToken} = useTokenList();
-	const {isLoadingOnChain} = useTokensWithBalance();
+	const {isLoading} = useTokensWithBalance();
 	const {prices} = usePrices();
 
 	/**********************************************************************************************
 	 ** If the balances are loading, we want to display a spinner as placeholder.
 	 *********************************************************************************************/
-	if (isLoadingOnChain(props.chainID)) {
-		return <IconLoader className={'mt-2 size-4 animate-spin text-neutral-900'} />;
+	if (isLoading) {
+		return <IconLoader className={'text-grey-900 mt-2 size-4 animate-spin'} />;
 	}
 
 	/**********************************************************************************************
@@ -65,8 +65,8 @@ function WalletLayout(props: TWalletLayoutProps): ReactNode {
 	if (props.searchTokenAddress) {
 		return (
 			<FetchedTokenButton
-				chainID={props.chainID}
 				tokenAddress={props.searchTokenAddress}
+				chainId={props.chainId}
 				onSelect={selected => {
 					props.onSelect?.(selected);
 					props.onOpenChange(false);
@@ -107,7 +107,10 @@ function WalletLayout(props: TWalletLayoutProps): ReactNode {
 function BalancesModalWrapper(props: {
 	isOpen: boolean;
 	onOpenChange: (isOpen: boolean) => void;
+	options: TBalancesCurtainOptions | undefined;
 	onRefresh: () => Promise<TChainTokens>;
+	isPopoverOpen: boolean;
+	onPopoverOpenChange: (value: boolean) => void;
 	children: ReactNode;
 }): ReactElement {
 	return (
@@ -135,32 +138,45 @@ function BalancesModalWrapper(props: {
 							'flex min-h-full items-end justify-center text-center sm:items-center sm:p-0 md:p-4'
 						}>
 						<TransitionChild
-							as={Fragment}
+							as={'div'}
 							enter={'ease-out duration-300'}
 							enterFrom={'opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95'}
 							enterTo={'opacity-100 translate-y-0 sm:scale-100'}
 							leave={'ease-in duration-200'}
 							leaveFrom={'opacity-100 translate-y-0 sm:scale-100'}
-							leaveTo={'opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95'}>
-							<DialogPanel
-								className={cl(
-									'relative overflow-hidden w-full flex md:h-auto h-screen flex-col items-center justify-start md:rounded-3xl !bg-white !p-2  transition-all',
-									' md:max-w-[560px] md:p-6'
-								)}>
-								<div className={'flex w-full justify-between p-4'}>
-									<p className={'text-grey-900 font-bold'}>{'Select Token'}</p>
-									<button
-										className={'group'}
-										onClick={() => props.onOpenChange(false)}>
-										<IconCross
-											className={
-												'size-4 text-neutral-900 transition-colors group-hover:text-neutral-600'
-											}
-										/>
-									</button>
-								</div>
-								<div className={'md:h-108 size-full max-h-screen pb-12 md:pb-0'}>{props.children}</div>
-							</DialogPanel>
+							leaveTo={'opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95'}
+							className={'w-full md:max-w-[560px]'}>
+							<Popover.Root open={props.isPopoverOpen}>
+								<Popover.Anchor>
+									<DialogPanel
+										className={cl(
+											'relative overflow-hidden w-full flex md:h-auto h-screen flex-col items-center justify-start md:rounded-3xl !bg-white !p-2  transition-all',
+											'md:p-6'
+										)}>
+										<div className={'flex w-full justify-between p-4'}>
+											<p className={'text-grey-900 font-bold'}>{'Select Token'}</p>
+											<button
+												className={'group'}
+												onClick={() => props.onOpenChange(false)}>
+												<IconCross
+													className={
+														'size-4 text-neutral-900 transition-colors group-hover:text-neutral-600'
+													}
+												/>
+											</button>
+										</div>
+										<div className={'md:h-108 size-full max-h-screen pb-12 md:pb-0'}>
+											{props.children}
+										</div>
+									</DialogPanel>
+									<SimplePopover
+										title={'Network Swtich'}
+										message={
+											'Multichain withdraw is not supported therefore you will only see tokens on the same network as the vault you are withdrawing from'
+										}
+									/>
+								</Popover.Anchor>
+							</Popover.Root>
 						</TransitionChild>
 					</div>
 				</div>
@@ -179,6 +195,10 @@ function BalancesModal(props: TBalancesCurtain): ReactElement {
 	const [searchValue, set_searchValue] = useState('');
 	const [filter, set_filter] = useState<'all' | 'stables' | 'other'>('all');
 	const [selectedChainId, set_selectedChainId] = useState(-1);
+	const preferableChainId = props.options?.forceDisplayChainId ?? selectedChainId;
+
+	const [isPopoverOpen, set_isPopoverOpen] = useState(false);
+
 	const {getIsStablecoin} = useGetIsStablecoin();
 	const {vaults} = useVaults();
 
@@ -294,15 +314,19 @@ function BalancesModal(props: TBalancesCurtain): ReactElement {
 	}, [filter, filteredVaultTokens, getIsStablecoin]);
 
 	const filteredByChain = filteredByCategory.filter(token => {
-		if (selectedChainId === -1) {
+		if (preferableChainId === -1) {
 			return true;
 		}
-		return token.chainID === selectedChainId;
+		return token.chainID === preferableChainId;
 	});
+
 	return (
 		<BalancesModalWrapper
 			isOpen={props.isOpen}
 			onOpenChange={props.onOpenChange}
+			isPopoverOpen={isPopoverOpen}
+			onPopoverOpenChange={set_isPopoverOpen}
+			options={props.options}
 			onRefresh={props.onRefresh}>
 			<div className={'relative flex h-full flex-col gap-4'}>
 				<input
@@ -348,9 +372,12 @@ function BalancesModal(props: TBalancesCurtain): ReactElement {
 							{'Other'}
 						</button>
 					</div>
+
 					<NetworkSelector
-						selectedChainId={selectedChainId}
+						isDisabled={!!props.options?.forceDisplayChainId}
+						selectedChainId={preferableChainId}
 						onNetworkChange={set_selectedChainId}
+						onPopoverOpenChange={set_isPopoverOpen}
 					/>
 				</div>
 
@@ -359,9 +386,9 @@ function BalancesModal(props: TBalancesCurtain): ReactElement {
 						filteredTokens={filteredByChain}
 						selectedTokens={props.selectedTokens}
 						onSelect={props.onSelect}
+						chainId={preferableChainId}
 						searchTokenAddress={searchTokenAddress}
 						onOpenChange={props.onOpenChange}
-						chainID={Number(props.options.chainID)}
 					/>
 				</div>
 			</div>
@@ -371,15 +398,13 @@ function BalancesModal(props: TBalancesCurtain): ReactElement {
 
 const BalancesModalContext = createContext<TBalancesCurtainContextProps>(defaultProps);
 export const BalancesModalContextApp = (props: TBalancesCurtainContextAppProps): React.ReactElement => {
-	const {configuration} = useWithdrawSolver();
 	const [shouldOpenCurtain, set_shouldOpenCurtain] = useState(false);
 	const [currentCallbackFunction, set_currentCallbackFunction] = useState<TSelectCallback | undefined>(undefined);
 	const {listTokensWithBalance, onRefresh} = useTokensWithBalance();
 	const {listTokens} = usePopularTokens();
 	const [tokensToUse, set_tokensToUse] = useState<TToken[]>([]);
 	const [allTokensToUse, set_allTokensToUse] = useState<TToken[]>([]);
-	const [options, set_options] = useState<TBalancesCurtainOptions>({chainID: -1});
-	const chain = useCurrentChain();
+	const [options, set_options] = useState<TBalancesCurtainOptions>();
 	const {vaultsArray} = useVaults();
 	const {balances, getBalance} = useWallet();
 	const {prices, pricingHash, getPrices} = usePrices();
@@ -425,15 +450,6 @@ export const BalancesModalContextApp = (props: TBalancesCurtainContextAppProps):
 	}, [underlyingTokens, pricingHash, getPrices]);
 
 	/**********************************************************************************************
-	 ** We want to update the chainIDToUse when the chainID changes.
-	 ** This is to keep the chain we are displaying the tokens for in sync with the chainID, even
-	 ** when we are getting new tokens from the listTokensWithBalance hook.
-	 *********************************************************************************************/
-	useEffect((): void => {
-		set_options(prev => ({...prev, chainID: chain.id}));
-	}, [chain.id]);
-
-	/**********************************************************************************************
 	 ** When the listTokensWithBalance hook is updated, we are getting a new list of tokens for
 	 ** the selected chainID. We want to update the tokensToUse state with this new list, but only
 	 ** based on the chainIDToUse state, to avoid having the "local" state to chainID 10 while the
@@ -450,7 +466,7 @@ export const BalancesModalContextApp = (props: TBalancesCurtainContextAppProps):
 		}
 		set_tokensToUse(noDuplicates);
 		set_allTokensToUse(allPopularTokens);
-	}, [listTokensWithBalance, options.chainID, listTokens]);
+	}, [listTokensWithBalance, listTokens]);
 
 	/**********************************************************************************************
 	 ** Callback function that is called when the user click the button to open the curtain. Two
@@ -462,8 +478,8 @@ export const BalancesModalContextApp = (props: TBalancesCurtainContextAppProps):
 	 *********************************************************************************************/
 	const onOpenCurtain: TBalancesCurtainContextProps['onOpenCurtain'] = useCallback(
 		(callbackFn, _options): void => {
-			if (_options?.chainID) {
-				const allPopularTokens = listTokens(_options.chainID);
+			if (_options) {
+				const allPopularTokens = listTokens();
 				/**********************************************************************************
 				 ** If the shouldBypassBalanceCheck option is set to true, we want to sort the
 				 ** tokens based on their balance instead of filtering the one with a balance of 0.
@@ -548,10 +564,10 @@ export const BalancesModalContextApp = (props: TBalancesCurtainContextAppProps):
 				tokensWithBalance={tokensToUse}
 				underlyingTokens={underlyingTokens}
 				allTokens={allTokensToUse}
-				selectedTokens={configuration.tokenToReceive ? [configuration.tokenToReceive] : undefined}
+				selectedTokens={options?.highlightedTokens ? options.highlightedTokens : undefined}
 				onOpenChange={set_shouldOpenCurtain}
 				onSelect={currentCallbackFunction}
-				options={{chainID: options.chainID || chain.id}}
+				options={options}
 			/>
 		</BalancesModalContext.Provider>
 	);

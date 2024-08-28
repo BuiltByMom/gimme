@@ -109,7 +109,7 @@ export function ToToken(): ReactElement {
 	const onSelectTokenToReceive = useCallback(() => {
 		plausible(PLAUSIBLE_EVENTS.CHANGE_TOKEN_TO_RECEIVE);
 		onOpenCurtain(token => onSetAssetToReceive(token), {
-			chainID: configuration.asset.token?.chainID,
+			forceDisplayChainId: configuration.asset.token?.chainID,
 			shouldBypassBalanceCheck: true,
 			highlightedTokens: [configuration.asset.token as TToken]
 		});
