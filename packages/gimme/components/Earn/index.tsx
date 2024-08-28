@@ -76,7 +76,7 @@ function BridgeBadge(): ReactElement {
 				})}{' '}
 				{'on '} {fromChainName} {'to deposit '}
 				{formatTAmount({
-					value: toBigInt(lifiQuote.estimate.fromAmount),
+					value: toBigInt(lifiQuote.estimate.toAmount),
 					decimals: lifiQuote.action.fromToken.decimals,
 					symbol: lifiQuote.action.toToken.symbol
 				})}

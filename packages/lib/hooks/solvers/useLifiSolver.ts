@@ -165,7 +165,12 @@ export const useLifiSolver = (
 				break;
 			}
 		}
-		if (contactCallsQuoteResponse && toBigInt(contactCallsQuoteResponse.estimate.fromAmount) <= spendAmount) {
+
+		if (
+			contactCallsQuoteResponse &&
+			toBigInt(contactCallsQuoteResponse.estimate.fromAmount) <= spendAmount &&
+			toBigInt(contactCallsQuoteResponse.estimate.toAmount) > 0n
+		) {
 			if (uniqueIdentifier.current !== currentIdentifier) {
 				return;
 			}
