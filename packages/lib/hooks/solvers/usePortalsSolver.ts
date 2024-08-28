@@ -94,6 +94,7 @@ export const usePortalsSolver = (
 			if (error) {
 				console.error(error);
 			}
+			set_isFetchingQuote(false);
 			return undefined;
 		}
 		set_latestQuote(result);
