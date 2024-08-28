@@ -80,37 +80,14 @@ export const useLifiSolver = (
 
 		set_isFetchingQuote(true);
 
-		const depositTxData = encodeFunctionData({
-			abi: parseAbi(config.depositContractAbi),
-			functionName: 'deposit',
-			args: [config.amount, address]
-		});
-
-		const contractCallsQuoteRequest: ContractCallsQuoteRequest = {
-			fromChain: config.fromChain,
-			fromToken: config.fromToken,
-			fromAddress: toAddress(address),
-			toChain: config.toChain,
-			toToken: config.vaultAsset,
-			toAmount: config.amount,
-			contractCalls: [
-				{
-					fromAmount: config.amount,
-					fromTokenAddress: config.vaultAsset,
-					toContractAddress: config.vaultAddress,
-					toContractCallData: depositTxData,
-					toContractGasLimit: config.depositGas
-				}
-			]
-		};
-
 		const quoteRequest: QuoteRequest = {
 			fromChain: config.fromChain,
 			toChain: outputTokenChainId,
 			fromToken: config.fromToken,
 			toToken: outputVaultAsset?.address,
 			fromAmount: spendAmount.toString(),
-			fromAddress: toAddress(address)
+			fromAddress: toAddress(address),
+			integrator: 'smol'
 		};
 
 		/******************************************************************************************
@@ -140,6 +117,29 @@ export const useLifiSolver = (
 		const {toAmountMin} = quote.estimate;
 		const steps = [100, 99, 98, 97, 95];
 		let contactCallsQuoteResponse: LiFiStep | undefined = undefined;
+		const contractCallsQuoteRequest: ContractCallsQuoteRequest = {
+			fromChain: config.fromChain,
+			fromToken: config.fromToken,
+			fromAddress: toAddress(address),
+			toChain: config.toChain,
+			toToken: config.vaultAsset,
+			toAmount: config.amount,
+			integrator: 'smol',
+			contractCalls: [
+				{
+					fromAmount: config.amount,
+					fromTokenAddress: config.vaultAsset,
+					toTokenAddress: config.vaultAddress,
+					toContractAddress: config.vaultAddress,
+					toContractGasLimit: config.depositGas,
+					toContractCallData: encodeFunctionData({
+						abi: parseAbi(config.depositContractAbi),
+						functionName: 'deposit',
+						args: [config.amount, address]
+					})
+				}
+			]
+		};
 
 		for (const step of steps) {
 			const scaledAmountToTry = (BigInt(step) * BigInt(toAmountMin)) / 100n;
