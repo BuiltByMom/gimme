@@ -1,5 +1,6 @@
-import {useCallback, useMemo, useState} from 'react';
+import {useCallback, useMemo, useRef, useState} from 'react';
 import {encodeFunctionData, erc20Abi, isHex, parseAbi} from 'viem';
+import {serialize} from 'wagmi';
 import {useWeb3} from '@builtbymom/web3/contexts/useWeb3';
 import {useAsyncTrigger} from '@builtbymom/web3/hooks/useAsyncTrigger';
 import {
@@ -9,11 +10,13 @@ import {
 	toAddress,
 	toBigInt,
 	toNormalizedBN,
+	ZERO_ADDRESS,
 	zeroNormalizedBN
 } from '@builtbymom/web3/utils';
 import {approveERC20, defaultTxStatus, retrieveConfig, toWagmiProvider} from '@builtbymom/web3/utils/wagmi';
 import {getContractCallsQuote, getQuote} from '@lifi/sdk';
 import {readContract, sendTransaction, waitForTransactionReceipt} from '@wagmi/core';
+import {createUniqueID} from '@lib/utils/tools.identifiers';
 
 import type {TAddress, TNormalizedBN, TToken} from '@builtbymom/web3/types';
 import type {TTxResponse} from '@builtbymom/web3/utils/wagmi';
@@ -38,6 +41,7 @@ export const useLifiSolver = (
 	const [isFetchingQuote, set_isFetchingQuote] = useState(false);
 	const spendAmount = inputAsset.normalizedBigAmount?.raw ?? 0n;
 	const isAboveAllowance = allowance.raw >= spendAmount;
+	const uniqueIdentifier = useRef<string | undefined>(undefined);
 
 	/**********************************************************************************************
 	 ** It's important not to make extra fetches. For this solver we should disable quote and
@@ -60,17 +64,19 @@ export const useLifiSolver = (
 		) {
 			return;
 		}
-
+		const fromToken = isEthAddress(inputAsset.token.address) ? ZERO_ADDRESS : inputAsset.token.address;
 		const config = {
 			fromChain: inputAsset.token.chainID,
 			toChain: outputTokenChainId,
-			fromToken: inputAsset.token.address,
+			fromToken: fromToken,
 			amount: spendAmount.toString(),
 			vaultAddress: outputTokenAddress,
 			vaultAsset: outputVaultAsset?.address,
-			depositGas: '100000',
+			depositGas: '1000000',
 			depositContractAbi: ['function deposit(uint amount, address to) external']
 		};
+		const currentIdentifier = createUniqueID(serialize(config));
+		uniqueIdentifier.current = createUniqueID(serialize(config));
 
 		set_isFetchingQuote(true);
 
@@ -99,22 +105,48 @@ export const useLifiSolver = (
 		};
 
 		const quoteRequest: QuoteRequest = {
-			fromChain: inputAsset.token.chainID,
+			fromChain: config.fromChain,
 			toChain: outputTokenChainId,
-			fromToken: inputAsset.token.address,
+			fromToken: config.fromToken,
 			toToken: outputVaultAsset?.address,
 			fromAmount: spendAmount.toString(),
 			fromAddress: toAddress(address)
 		};
 
+		/******************************************************************************************
+		 ** Try to retrive the quote or set it to undefined if it fails.
+		 *****************************************************************************************/
+		let quote: LiFiStep | undefined = undefined;
 		try {
-			const quote = await getQuote(quoteRequest);
-			const {toAmountMin} = quote.estimate;
-			const steps = [100, 99, 98, 97, 95];
-			let contactCallsQuoteResponse: LiFiStep | undefined = undefined;
+			if (uniqueIdentifier.current !== currentIdentifier) {
+				return;
+			}
+			quote = await getQuote(quoteRequest);
+		} catch (e) {
+			set_latestQuote(undefined);
+			console.error('No possible route found for the quote');
+		}
+		if (!quote) {
+			set_latestQuote(undefined);
+			return;
+		}
 
-			for (const step of steps) {
-				const scaledAmountToTry = (BigInt(step) * BigInt(toAmountMin)) / 100n;
+		/******************************************************************************************
+		 ** Try to get the an amount to spend lower than the estimated amount. This is a multiple
+		 ** step process where we check if the amount is lower than the estimated amount. If it is
+		 ** we break the loop and return the quote. If not we try again with a lower amount until
+		 ** we reach the minimum amount.
+		 *****************************************************************************************/
+		const {toAmountMin} = quote.estimate;
+		const steps = [100, 99, 98, 97, 95];
+		let contactCallsQuoteResponse: LiFiStep | undefined = undefined;
+
+		for (const step of steps) {
+			const scaledAmountToTry = (BigInt(step) * BigInt(toAmountMin)) / 100n;
+			try {
+				if (uniqueIdentifier.current !== currentIdentifier) {
+					return;
+				}
 				contactCallsQuoteResponse = await getContractCallsQuote({
 					...contractCallsQuoteRequest,
 					toAmount: scaledAmountToTry.toString(),
@@ -125,19 +157,23 @@ export const useLifiSolver = (
 						}
 					]
 				});
-				if (toBigInt(contactCallsQuoteResponse.estimate.fromAmount) <= spendAmount) {
-					break;
-				}
+			} catch (e) {
+				console.error(`No route found for step ${step}`);
+				continue;
 			}
-			if (contactCallsQuoteResponse) {
-				set_latestQuote(contactCallsQuoteResponse);
-				set_isFetchingQuote(false);
-				return contactCallsQuoteResponse;
+			if (toBigInt(contactCallsQuoteResponse.estimate.fromAmount) <= spendAmount) {
+				break;
 			}
-		} catch (e) {
-			set_latestQuote(undefined);
-			console.error(e);
 		}
+		if (contactCallsQuoteResponse && toBigInt(contactCallsQuoteResponse.estimate.fromAmount) <= spendAmount) {
+			if (uniqueIdentifier.current !== currentIdentifier) {
+				return;
+			}
+			set_latestQuote(contactCallsQuoteResponse);
+			set_isFetchingQuote(false);
+			return contactCallsQuoteResponse;
+		}
+		set_latestQuote(undefined);
 		set_isFetchingQuote(false);
 		return null;
 	}, [address, inputAsset.token, outputTokenAddress, outputTokenChainId, outputVaultAsset?.address, spendAmount]);
