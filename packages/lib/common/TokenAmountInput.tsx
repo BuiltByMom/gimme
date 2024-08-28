@@ -1,4 +1,5 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import Image from 'next/image';
 import {usePlausible} from 'next-plausible';
 import InputNumber from 'rc-input-number';
 import {useWeb3} from '@builtbymom/web3/contexts/useWeb3';
@@ -226,16 +227,28 @@ export function TokenAmountInput({
 				<div className={'flex justify-between gap-2 md:items-start'}>
 					<div className={'flex w-full gap-2'}>
 						{selectedToken && shouldDisplayTokenLogo && (
-							<ImageWithFallback
-								className={'mt-1'}
-								alt={selectedToken?.symbol || 'token'}
-								unoptimized
-								src={tokenIcon || ''}
-								altSrc={`${process.env.SMOL_ASSETS_URL}/token/${selectedToken?.chainID}/${selectedToken?.address}/logo-128.png`}
-								quality={90}
-								width={32}
-								height={32}
-							/>
+							<div className={'relative mt-1'}>
+								<ImageWithFallback
+									alt={selectedToken?.symbol || 'token'}
+									unoptimized
+									src={tokenIcon || ''}
+									altSrc={`${process.env.SMOL_ASSETS_URL}/token/${selectedToken?.chainID}/${selectedToken?.address}/logo-128.png`}
+									quality={90}
+									width={32}
+									height={32}
+								/>
+								<div
+									className={
+										'absolute bottom-4 left-5 flex size-4 items-center justify-center rounded-full bg-white'
+									}>
+									<Image
+										width={14}
+										height={14}
+										alt={selectedToken.chainID.toString()}
+										src={`${process.env.SMOL_ASSETS_URL}/chain/${selectedToken.chainID}/logo.svg`}
+									/>
+								</div>
+							</div>
 						)}
 						<div className={'flex w-full flex-col'}>
 							<div className={'flex gap-1'}>
