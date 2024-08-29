@@ -148,6 +148,7 @@ export const useLifiSolver = (
 
 			try {
 				if (uniqueIdentifier.current !== currentIdentifier) {
+					console.error('Unique identifier mismatch');
 					return;
 				}
 				contactCallsQuoteResponse = await getContractCallsQuote({
@@ -157,6 +158,7 @@ export const useLifiSolver = (
 				});
 			} catch (e) {
 				console.error(`No route found for step ${step}`);
+				await new Promise(resolve => setTimeout(resolve, 500));
 				continue;
 			}
 			if (toBigInt(contactCallsQuoteResponse.estimate.fromAmount) <= spendAmount) {
