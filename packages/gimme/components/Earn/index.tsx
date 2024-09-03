@@ -101,10 +101,22 @@ function BridgeBadge(): ReactElement {
 	const fromChainName = supportedNetworks.find(network => network.id === configuration.asset.token?.chainID)?.name;
 	const toChainName = supportedNetworks.find(network => network.id === configuration.opportunity?.chainID)?.name;
 	const lifiQuote = quote as LiFiStep;
+	const secondToTime = (seconds: number): string => {
+		const h = Math.floor(seconds / 3600);
+		const m = Math.floor((seconds % 3600) / 60);
+		const s = Math.floor((seconds % 3600) % 60);
+		if (h === 0 && m === 0) {
+			return `${s}s`;
+		}
+		if (h === 0) {
+			return `${m}m ${s}s`;
+		}
+		return `${h}h ${m}m ${s}s`;
+	};
 
 	return (
 		<div className={'flex w-full justify-between gap-4'}>
-			<p className={'max-w-[357px]'}>
+			<p className={'max-w-[357px] whitespace-break-spaces'}>
 				{'You will spend at most '}
 				{formatTAmount({
 					value: configuration.asset.normalizedBigAmount.raw,
@@ -117,9 +129,8 @@ function BridgeBadge(): ReactElement {
 					decimals: lifiQuote.action.toToken.decimals,
 					symbol: lifiQuote.action.toToken.symbol
 				})}
-				{' to the '}
-				{configuration.opportunity?.name || lifiQuote.action.toToken.symbol}
-				{' vault on'} {toChainName}
+				{` to the ${configuration.opportunity?.name || lifiQuote.action.toToken.symbol} vault on ${toChainName}.`}
+				{`\nThe transaction will be executed in ${secondToTime(lifiQuote.estimate.executionDuration)}.`}
 			</p>
 			<div className={'flex items-center gap-2'}>
 				<p className={'text-base'}>{fromChainName}</p>

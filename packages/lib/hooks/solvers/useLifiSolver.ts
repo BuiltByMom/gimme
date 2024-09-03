@@ -17,12 +17,14 @@ import {
 import {approveERC20, defaultTxStatus, retrieveConfig, toWagmiProvider} from '@builtbymom/web3/utils/wagmi';
 import {getContractCallsQuote, getQuote} from '@lifi/sdk';
 import {readContract, sendTransaction, switchChain, waitForTransactionReceipt} from '@wagmi/core';
+import {getLifiStatus} from '@lib/utils/api.lifi';
 import {createUniqueID} from '@lib/utils/tools.identifiers';
 
 import type {TAddress, TNormalizedBN, TToken} from '@builtbymom/web3/types';
 import type {TTxResponse} from '@builtbymom/web3/utils/wagmi';
 import type {TSolverContextBase} from '@lib/contexts/useSolver.types';
 import type {TTokenAmountInputElement} from '@lib/types/utils';
+import type {TLifiStatusResponse} from '@lib/utils/api.lifi';
 import type {ContractCallsQuoteRequest, LiFiStep, QuoteRequest} from '@lifi/sdk';
 
 export const useLifiSolver = (
@@ -30,7 +32,6 @@ export const useLifiSolver = (
 	outputTokenAddress: TAddress | undefined,
 	outputTokenChainId: number | undefined,
 	outputVaultAsset: TToken | undefined,
-
 	isBridgeNeeded: boolean
 ): TSolverContextBase<LiFiStep | null> => {
 	const {address, provider} = useWeb3();
@@ -293,18 +294,28 @@ export const useLifiSolver = (
 
 			const receipt = await waitForTransactionReceipt(retrieveConfig(), {
 				chainId: wagmiProvider.chainId,
+				timeout: 15 * 60 * 1000, // Polygon can be very, VERY, slow. 15mn timeout just to be sure
 				hash
 			});
-
 			if (receipt.status === 'success') {
+				let result: TLifiStatusResponse;
+				do {
+					result = await getLifiStatus({
+						fromChainID: inputAsset.token.chainID,
+						toChainID: Number(outputTokenChainId),
+						txHash: receipt.transactionHash
+					});
+					await new Promise(resolve => setTimeout(resolve, 5000));
+				} while (result.status !== 'DONE' && result.status !== 'FAILED');
+
 				return {isSuccessful: true, receipt: receipt};
 			}
-			return {isSuccessful: false};
+			return {isSuccessful: false, receipt: receipt};
 		} catch (error) {
 			console.error(error);
 			return {isSuccessful: false};
 		}
-	}, [inputAsset.token, latestQuote, outputTokenAddress, provider]);
+	}, [inputAsset.token, latestQuote, outputTokenAddress, outputTokenChainId, provider]);
 
 	const onExecuteDeposit = useCallback(
 		async (onSuccess: () => void): Promise<void> => {

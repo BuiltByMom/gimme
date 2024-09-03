@@ -377,6 +377,7 @@ export const usePortalsSolver = (
 			});
 			const receipt = await waitForTransactionReceipt(retrieveConfig(), {
 				chainId: wagmiProvider.chainId,
+				timeout: 15 * 60 * 1000, // Polygon can be very, VERY, slow. 15mn timeout just to be sure
 				hash
 			});
 			if (receipt.status === 'success') {
