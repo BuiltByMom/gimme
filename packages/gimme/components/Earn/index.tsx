@@ -2,7 +2,15 @@ import {type ReactElement, useCallback, useEffect, useRef, useState} from 'react
 import {useRouter} from 'next/router';
 import {serialize} from 'wagmi';
 import useWallet from '@builtbymom/web3/contexts/useWallet';
-import {cl, formatTAmount, isAddress, isZeroAddress, toBigInt} from '@builtbymom/web3/utils';
+import {
+	cl,
+	formatAmount,
+	formatTAmount,
+	isAddress,
+	isZeroAddress,
+	toBigInt,
+	toNormalizedBN
+} from '@builtbymom/web3/utils';
 import {TokenAmountInput} from '@lib/common/TokenAmountInput';
 import {useDepositSolver} from '@lib/contexts/useDepositSolver';
 import {useVaults} from '@lib/contexts/useVaults';
@@ -45,10 +53,40 @@ function ZapsBadge(): ReactElement {
 		return <p className={'w-full'}>{'Sorry! No possible routes found for this configuration!'}</p>;
 	}
 
+	/**********************************************************************************************
+	 ** If we are working with a Lifi quote, display the regular message
+	 *********************************************************************************************/
+	if ((quote as {estimate?: never})?.estimate) {
+		return (
+			<div className={'flex w-full justify-between gap-4'}>
+				<p className={'max-w-[357px]'}>
+					{'Hey! We gonna swap your tokens so you can use this opportunity. Don’t worry, no extra clicks.'}
+				</p>
+				<div className={'flex items-center gap-2'}>
+					<p className={'text-base'}>{configuration.asset.token?.symbol}</p>
+					<IconArrow />
+					<p className={'text-base'}>{configuration.opportunity?.token.symbol}</p>
+				</div>
+			</div>
+		);
+	}
+
+	console.warn(quote, configuration.opportunity?.pricePerShare);
+	const minOut = toNormalizedBN(
+		toBigInt((quote as any)?.minOutputAmount || 0),
+		(quote as any)?.outputTokenDecimals || 18
+	).normalized;
+	const pps = toNormalizedBN(
+		toBigInt(configuration.opportunity?.pricePerShare || 0),
+		configuration.opportunity?.token.decimals || 18
+	).normalized;
 	return (
 		<div className={'flex w-full justify-between gap-4'}>
 			<p className={'max-w-[357px]'}>
 				{'Hey! We gonna swap your tokens so you can use this opportunity. Don’t worry, no extra clicks.'}
+				<span className={'block'}>
+					{`You will receive at least ${formatAmount(minOut * pps, 4, 2)} ${configuration.opportunity?.token.symbol}`}
+				</span>
 			</p>
 			<div className={'flex items-center gap-2'}>
 				<p className={'text-base'}>{configuration.asset.token?.symbol}</p>
@@ -76,12 +114,12 @@ function BridgeBadge(): ReactElement {
 				})}{' '}
 				{'on '} {fromChainName} {'to deposit '}
 				{formatTAmount({
-					value: toBigInt(lifiQuote.estimate.toAmount),
-					decimals: lifiQuote.action.fromToken.decimals,
+					value: toBigInt(lifiQuote.estimate.toAmountMin),
+					decimals: lifiQuote.action.toToken.decimals,
 					symbol: lifiQuote.action.toToken.symbol
 				})}
 				{' to the '}
-				{lifiQuote.action.toToken.symbol}
+				{configuration.opportunity?.name || lifiQuote.action.toToken.symbol}
 				{' vault on'} {toChainName}
 			</p>
 			<div className={'flex items-center gap-2'}>

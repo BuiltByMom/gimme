@@ -1,5 +1,6 @@
 import {useCallback, useMemo, useRef, useState} from 'react';
-import {encodeFunctionData, erc20Abi, isHex, parseAbi} from 'viem';
+import toast from 'react-hot-toast';
+import {BaseError, encodeFunctionData, erc20Abi, isHex, parseAbi} from 'viem';
 import {serialize} from 'wagmi';
 import {useWeb3} from '@builtbymom/web3/contexts/useWeb3';
 import {useAsyncTrigger} from '@builtbymom/web3/hooks/useAsyncTrigger';
@@ -15,7 +16,7 @@ import {
 } from '@builtbymom/web3/utils';
 import {approveERC20, defaultTxStatus, retrieveConfig, toWagmiProvider} from '@builtbymom/web3/utils/wagmi';
 import {getContractCallsQuote, getQuote} from '@lifi/sdk';
-import {readContract, sendTransaction, waitForTransactionReceipt} from '@wagmi/core';
+import {readContract, sendTransaction, switchChain, waitForTransactionReceipt} from '@wagmi/core';
 import {createUniqueID} from '@lib/utils/tools.identifiers';
 
 import type {TAddress, TNormalizedBN, TToken} from '@builtbymom/web3/types';
@@ -125,24 +126,25 @@ export const useLifiSolver = (
 			toToken: config.vaultAsset,
 			toAmount: config.amount,
 			integrator: 'smol',
-			contractCalls: [
-				{
-					fromAmount: config.amount,
-					fromTokenAddress: config.vaultAsset,
-					toTokenAddress: config.vaultAddress,
-					toContractAddress: config.vaultAddress,
-					toContractGasLimit: config.depositGas,
-					toContractCallData: encodeFunctionData({
-						abi: parseAbi(config.depositContractAbi),
-						functionName: 'deposit',
-						args: [config.amount, address]
-					})
-				}
-			]
+			contractOutputsToken: config.vaultAsset,
+			contractCalls: []
 		};
 
 		for (const step of steps) {
 			const scaledAmountToTry = (BigInt(step) * BigInt(toAmountMin)) / 100n;
+			const contractCall = {
+				fromAmount: scaledAmountToTry.toString(),
+				fromTokenAddress: config.vaultAsset,
+				toTokenAddress: config.vaultAddress,
+				toContractAddress: config.vaultAddress,
+				toContractGasLimit: config.depositGas,
+				toContractCallData: encodeFunctionData({
+					abi: parseAbi(config.depositContractAbi),
+					functionName: 'deposit',
+					args: [scaledAmountToTry, address]
+				})
+			};
+
 			try {
 				if (uniqueIdentifier.current !== currentIdentifier) {
 					return;
@@ -150,12 +152,7 @@ export const useLifiSolver = (
 				contactCallsQuoteResponse = await getContractCallsQuote({
 					...contractCallsQuoteRequest,
 					toAmount: scaledAmountToTry.toString(),
-					contractCalls: [
-						{
-							...contractCallsQuoteRequest.contractCalls[0],
-							fromAmount: scaledAmountToTry.toString()
-						}
-					]
+					contractCalls: [contractCall]
 				});
 			} catch (e) {
 				console.error(`No route found for step ${step}`);
@@ -166,14 +163,13 @@ export const useLifiSolver = (
 			}
 		}
 
-		if (
-			contactCallsQuoteResponse &&
-			toBigInt(contactCallsQuoteResponse.estimate.fromAmount) <= spendAmount &&
-			toBigInt(contactCallsQuoteResponse.estimate.toAmount) > 0n
-		) {
+		if (contactCallsQuoteResponse && toBigInt(contactCallsQuoteResponse.estimate.fromAmount) <= spendAmount) {
 			if (uniqueIdentifier.current !== currentIdentifier) {
 				return;
 			}
+			contactCallsQuoteResponse.estimate.toAmountMin = toAmountMin.toString();
+			contactCallsQuoteResponse.estimate.toAmount = toAmountMin.toString();
+			console.warn(contactCallsQuoteResponse.estimate);
 			set_latestQuote(contactCallsQuoteResponse);
 			set_isFetchingQuote(false);
 			return contactCallsQuoteResponse;
@@ -269,15 +265,29 @@ export const useLifiSolver = (
 		try {
 			set_depositStatus({...defaultTxStatus, pending: true});
 
-			const {value, to, data, gasLimit, gasPrice} = latestQuote?.transactionRequest || {};
+			const {value, to, data, gasLimit, gasPrice, chainId} = latestQuote?.transactionRequest || {};
 			const wagmiProvider = await toWagmiProvider(provider);
-
 			assert(isHex(data), 'Data is not hex');
+			assert(chainId, 'Chain ID is not set');
 			assert(wagmiProvider.walletClient, 'Wallet client is not set');
+			if (wagmiProvider.chainId !== chainId) {
+				try {
+					await switchChain(retrieveConfig(), {chainId});
+				} catch (error) {
+					if (!(error instanceof BaseError)) {
+						return {isSuccessful: false, error};
+					}
+					toast.error(error.shortMessage);
+					console.error(error);
+					return {isSuccessful: false, error};
+				}
+			}
+
 			const hash = await sendTransaction(retrieveConfig(), {
 				value: toBigInt(value ?? 0),
 				to: toAddress(to),
 				data,
+				chainId: chainId,
 				gas: gasLimit ? BigInt(gasLimit as string) : undefined,
 				gasPrice: gasPrice ? BigInt(gasPrice as string) : undefined
 			});
