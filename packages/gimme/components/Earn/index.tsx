@@ -71,7 +71,6 @@ function ZapsBadge(): ReactElement {
 		);
 	}
 
-	console.warn(quote, configuration.opportunity?.pricePerShare);
 	const minOut = toNormalizedBN(
 		toBigInt((quote as any)?.minOutputAmount || 0),
 		(quote as any)?.outputTokenDecimals || 18

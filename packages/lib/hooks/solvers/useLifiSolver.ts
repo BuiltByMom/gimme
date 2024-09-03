@@ -169,7 +169,6 @@ export const useLifiSolver = (
 			}
 			contactCallsQuoteResponse.estimate.toAmountMin = toAmountMin.toString();
 			contactCallsQuoteResponse.estimate.toAmount = toAmountMin.toString();
-			console.warn(contactCallsQuoteResponse.estimate);
 			set_latestQuote(contactCallsQuoteResponse);
 			set_isFetchingQuote(false);
 			return contactCallsQuoteResponse;
