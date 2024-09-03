@@ -35,7 +35,7 @@ export type TDepositActions =
 
 export type TDepositConfiguration = {
 	asset: TTokenAmountInputElement;
-	opportunity: (TYDaemonVault & {pricePerShare: string}) | undefined;
+	opportunity: (TYDaemonVault & {pricePerShare?: string}) | undefined;
 };
 
 export type TDepositSolverContext<TQuote> = TSolverContextBase<TQuote> & {
