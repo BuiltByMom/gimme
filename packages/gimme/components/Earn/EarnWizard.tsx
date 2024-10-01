@@ -150,7 +150,6 @@ export function EarnWizard(): ReactElement {
 				isSwap: isZapNeeded,
 				tokenAmount: configuration.asset.amount,
 				action: `Deposit ${configuration.asset.amount} ${configuration.asset.token?.symbol} -> ${configuration.opportunity?.symbol} on chain ${configuration.opportunity?.chainID}`
-
 			}
 		});
 		onRefreshTokens('DEPOSIT');
@@ -158,9 +157,11 @@ export function EarnWizard(): ReactElement {
 		configuration.asset.amount,
 		configuration.asset.token?.address,
 		configuration.asset.token?.name,
+		configuration.asset.token?.symbol,
 		configuration.opportunity?.address,
 		configuration.opportunity?.chainID,
 		configuration.opportunity?.name,
+		configuration.opportunity?.symbol,
 		isZapNeeded,
 		onRefreshTokens,
 		plausible

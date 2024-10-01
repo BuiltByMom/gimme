@@ -20,6 +20,8 @@ import {readContract, sendTransaction, switchChain, waitForTransactionReceipt} f
 import {getLifiStatus} from '@lib/utils/api.lifi';
 import {createUniqueID} from '@lib/utils/tools.identifiers';
 
+import {useLifiToast} from '../helpers/useLifiToast';
+
 import type {TAddress, TNormalizedBN, TToken} from '@builtbymom/web3/types';
 import type {TTxResponse} from '@builtbymom/web3/utils/wagmi';
 import type {TSolverContextBase} from '@lib/contexts/useSolver.types';
@@ -44,6 +46,7 @@ export const useLifiSolver = (
 	const spendAmount = inputAsset.normalizedBigAmount?.raw ?? 0n;
 	const isAboveAllowance = allowance.raw >= spendAmount;
 	const uniqueIdentifier = useRef<string | undefined>(undefined);
+	const {addToast} = useLifiToast();
 
 	/**********************************************************************************************
 	 ** It's important not to make extra fetches. For this solver we should disable quote and
@@ -77,6 +80,7 @@ export const useLifiSolver = (
 			depositGas: '1000000',
 			depositContractAbi: ['function deposit(uint amount, address to) external']
 		};
+
 		const currentIdentifier = createUniqueID(serialize(config));
 		uniqueIdentifier.current = createUniqueID(serialize(config));
 
@@ -91,94 +95,66 @@ export const useLifiSolver = (
 			fromAddress: toAddress(address),
 			integrator: 'smol'
 		};
+		const quote = await getQuote(quoteRequest);
+		const approveTxData = encodeFunctionData({
+			abi: erc20Abi,
+			functionName: 'approve',
+			args: [config.vaultAddress, toBigInt(quote.estimate.toAmountMin)]
+		});
 
-		/******************************************************************************************
-		 ** Try to retrive the quote or set it to undefined if it fails.
-		 *****************************************************************************************/
-		let quote: LiFiStep | undefined = undefined;
-		try {
-			if (uniqueIdentifier.current !== currentIdentifier) {
-				return;
-			}
-			quote = await getQuote(quoteRequest);
-		} catch (e) {
-			set_latestQuote(undefined);
-			console.error('No possible route found for the quote');
-		}
-		if (!quote) {
-			set_latestQuote(undefined);
-			return;
-		}
+		const depositTxData = encodeFunctionData({
+			abi: parseAbi(config.depositContractAbi),
+			functionName: 'deposit',
+			args: [quote.estimate.toAmountMin, address]
+		});
 
-		/******************************************************************************************
-		 ** Try to get the an amount to spend lower than the estimated amount. This is a multiple
-		 ** step process where we check if the amount is lower than the estimated amount. If it is
-		 ** we break the loop and return the quote. If not we try again with a lower amount until
-		 ** we reach the minimum amount.
-		 *****************************************************************************************/
-		const {toAmountMin} = quote.estimate;
-		const steps = [100, 99, 98, 97, 95];
-		let contactCallsQuoteResponse: LiFiStep | undefined = undefined;
 		const contractCallsQuoteRequest: ContractCallsQuoteRequest = {
 			fromChain: config.fromChain,
 			fromToken: config.fromToken,
 			fromAddress: toAddress(address),
 			toChain: config.toChain,
 			toToken: config.vaultAsset,
-			toAmount: config.amount,
-			integrator: 'smol',
-			contractOutputsToken: config.vaultAsset,
-			contractCalls: []
+			fromAmount: config.amount,
+			contractCalls: [
+				{
+					fromAmount: quote.estimate.toAmountMin,
+					fromTokenAddress: config.vaultAsset,
+					toContractAddress: config.vaultAddress,
+					toContractCallData: approveTxData,
+					toContractGasLimit: config.depositGas
+				},
+				{
+					fromAmount: quote.estimate.toAmountMin,
+					fromTokenAddress: config.vaultAsset,
+					toContractAddress: config.vaultAddress,
+					toContractCallData: depositTxData,
+					toContractGasLimit: config.depositGas
+				}
+			]
 		};
 
-		for (const step of steps) {
-			const scaledAmountToTry = (BigInt(step) * BigInt(toAmountMin)) / 100n;
-			const contractCall = {
-				fromAmount: scaledAmountToTry.toString(),
-				fromTokenAddress: config.vaultAsset,
-				toTokenAddress: config.vaultAddress,
-				toContractAddress: config.vaultAddress,
-				toContractGasLimit: config.depositGas,
-				toContractCallData: encodeFunctionData({
-					abi: parseAbi(config.depositContractAbi),
-					functionName: 'deposit',
-					args: [scaledAmountToTry, address]
-				})
-			};
-
-			try {
-				if (uniqueIdentifier.current !== currentIdentifier) {
-					console.error('Unique identifier mismatch');
-					return;
-				}
-				contactCallsQuoteResponse = await getContractCallsQuote({
-					...contractCallsQuoteRequest,
-					toAmount: scaledAmountToTry.toString(),
-					contractCalls: [contractCall]
-				});
-			} catch (e) {
-				console.error(`No route found for step ${step}`);
-				await new Promise(resolve => setTimeout(resolve, 500));
-				continue;
-			}
-			if (toBigInt(contactCallsQuoteResponse.estimate.fromAmount) <= spendAmount) {
-				break;
-			}
-		}
-
-		if (contactCallsQuoteResponse && toBigInt(contactCallsQuoteResponse.estimate.fromAmount) <= spendAmount) {
+		/******************************************************************************************
+		 ** Try to retrive the quote or set it to undefined if it fails.
+		 *****************************************************************************************/
+		let contractCallsQuote: LiFiStep | undefined = undefined;
+		try {
 			if (uniqueIdentifier.current !== currentIdentifier) {
 				return;
 			}
-			contactCallsQuoteResponse.estimate.toAmountMin = toAmountMin.toString();
-			contactCallsQuoteResponse.estimate.toAmount = toAmountMin.toString();
-			set_latestQuote(contactCallsQuoteResponse);
-			set_isFetchingQuote(false);
-			return contactCallsQuoteResponse;
+			contractCallsQuote = await getContractCallsQuote(contractCallsQuoteRequest);
+		} catch (e) {
+			console.error(e);
+			set_latestQuote(undefined);
+			console.error('No possible route found for the quote');
 		}
-		set_latestQuote(undefined);
+
 		set_isFetchingQuote(false);
-		return null;
+
+		if (!contractCallsQuote?.action) {
+			set_latestQuote(undefined);
+			return;
+		}
+		set_latestQuote(contractCallsQuote);
 	}, [address, inputAsset.token, outputTokenAddress, outputTokenChainId, outputVaultAsset?.address, spendAmount]);
 
 	useAsyncTrigger(async (): Promise<void> => {

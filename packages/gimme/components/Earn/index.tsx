@@ -101,6 +101,7 @@ function BridgeBadge(): ReactElement {
 	const fromChainName = supportedNetworks.find(network => network.id === configuration.asset.token?.chainID)?.name;
 	const toChainName = supportedNetworks.find(network => network.id === configuration.opportunity?.chainID)?.name;
 	const lifiQuote = quote as LiFiStep;
+
 	const secondToTime = (seconds: number): string => {
 		const h = Math.floor(seconds / 3600);
 		const m = Math.floor((seconds % 3600) / 60);
