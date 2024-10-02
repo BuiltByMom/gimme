@@ -17,16 +17,13 @@ import {
 import {approveERC20, defaultTxStatus, retrieveConfig, toWagmiProvider} from '@builtbymom/web3/utils/wagmi';
 import {getContractCallsQuote, getQuote} from '@lifi/sdk';
 import {readContract, sendTransaction, switchChain, waitForTransactionReceipt} from '@wagmi/core';
-import {getLifiStatus} from '@lib/utils/api.lifi';
+import {getLifiStatus, type TLifiStatusResponse} from '@lib/utils/api.lifi';
 import {createUniqueID} from '@lib/utils/tools.identifiers';
-
-import {useLifiToast} from '../helpers/useLifiToast';
 
 import type {TAddress, TNormalizedBN, TToken} from '@builtbymom/web3/types';
 import type {TTxResponse} from '@builtbymom/web3/utils/wagmi';
 import type {TSolverContextBase} from '@lib/contexts/useSolver.types';
 import type {TTokenAmountInputElement} from '@lib/types/utils';
-import type {TLifiStatusResponse} from '@lib/utils/api.lifi';
 import type {ContractCallsQuoteRequest, LiFiStep, QuoteRequest} from '@lifi/sdk';
 
 export const useLifiSolver = (
@@ -46,7 +43,6 @@ export const useLifiSolver = (
 	const spendAmount = inputAsset.normalizedBigAmount?.raw ?? 0n;
 	const isAboveAllowance = allowance.raw >= spendAmount;
 	const uniqueIdentifier = useRef<string | undefined>(undefined);
-	const {addToast} = useLifiToast();
 
 	/**********************************************************************************************
 	 ** It's important not to make extra fetches. For this solver we should disable quote and
