@@ -7,6 +7,8 @@ import {useWeb3} from '@builtbymom/web3/contexts/useWeb3';
 import {cl, truncateHex} from '@builtbymom/web3/utils';
 import {useAccountModal} from '@rainbow-me/rainbowkit';
 import {LinkOrDiv} from '@lib/common/LinkOrDiv';
+import {useNotifications} from '@lib/contexts/useNotifications';
+import {IconBell} from '@lib/icons/IconBell';
 import {Button} from '@lib/primitives/Button';
 import {PLAUSIBLE_EVENTS} from '@lib/utils/plausible';
 
@@ -49,6 +51,8 @@ const LANDING_TOP_NAV: TNavBar = [
 function WalletSection(): ReactElement {
 	const {openAccountModal} = useAccountModal();
 	const {address, ens, clusters, openLoginModal} = useWeb3();
+
+	const {set_shouldOpenCurtain} = useNotifications();
 
 	const router = useRouter();
 	const currentPage = router.pathname;
@@ -93,6 +97,9 @@ function WalletSection(): ReactElement {
 				}}
 				className={'text-grey-900 pr-3 font-bold transition-all hover:opacity-70 md:mr-0'}>
 				{buttonLabel}
+			</button>
+			<button onClick={(): void => set_shouldOpenCurtain(true)}>
+				<IconBell className={'size-4 font-bold transition-colors'} />
 			</button>
 		</div>
 	);
@@ -146,6 +153,7 @@ export function TopBar(props: {router: Router}): ReactElement {
 						</LinkOrDiv>
 					))}
 				</div>
+
 				{/* <div className={'mx-10 w-px bg-white'} /> */}
 				<div className={'col-span-3 w-full place-content-center pl-6'}>
 					{isLandingPage ? (
