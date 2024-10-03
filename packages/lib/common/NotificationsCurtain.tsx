@@ -21,7 +21,7 @@ export function NotificationsCurtain(props: {
 						className={
 							'border-grey-200 flex w-full grow flex-col border bg-white p-5 md:my-2 md:mr-2 md:rounded-3xl'
 						}>
-						<div>
+						<div className={'h-full'}>
 							<div className={'mb-4 flex items-center justify-between'}>
 								<Drawer.Close className={'hover:bg-grey-200 rounded-full p-1'}>
 									<IconChevron className={'size-6'} />
@@ -30,9 +30,23 @@ export function NotificationsCurtain(props: {
 									{'Notifications'}
 								</Drawer.Title>
 							</div>
-							<Drawer.Content>
-								<Notification />
-							</Drawer.Content>
+							<div className={'h-[94.5%] overflow-y-auto overflow-x-hidden'}>
+								<Drawer.Content className={'flex h-full flex-col gap-4'}>
+									<Notification />
+									<Notification />
+									<Notification />
+									<Notification />
+									<Notification />
+									<Notification />
+									<Notification />
+									<Notification />
+									<Notification />
+									<Notification />
+									<Notification />
+									<Notification />
+									<Notification />
+								</Drawer.Content>
+							</div>
 						</div>
 					</div>
 				</Drawer.Content>

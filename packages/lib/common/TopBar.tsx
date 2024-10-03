@@ -89,13 +89,13 @@ function WalletSection(): ReactElement {
 		<div
 			className={cl(
 				'flex items-center justify-center gap-3 rounded-2xl border border-white bg-white/60 py-0 pl-2 backdrop-blur-md md:border-none md:bg-transparent md:p-0',
-				'md:py-2 md:backdrop-filter-none'
+				'md:py-2 md:backdrop-filter-none pr-2'
 			)}>
 			<button
 				onClick={(): void => {
 					openAccountModal?.();
 				}}
-				className={'text-grey-900 pr-3 font-bold transition-all hover:opacity-70 md:mr-0'}>
+				className={'text-grey-900 font-bold transition-all hover:opacity-70 md:mr-0'}>
 				{buttonLabel}
 			</button>
 			<button onClick={(): void => set_shouldOpenCurtain(true)}>
