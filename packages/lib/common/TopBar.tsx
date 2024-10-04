@@ -98,7 +98,9 @@ function WalletSection(): ReactElement {
 				className={'text-grey-900 font-bold transition-all hover:opacity-70 md:mr-0'}>
 				{buttonLabel}
 			</button>
-			<button onClick={(): void => set_shouldOpenCurtain(true)}>
+			<button
+				className={'hover:bg-grey-200 rounded-full p-1 transition-colors'}
+				onClick={(): void => set_shouldOpenCurtain(true)}>
 				<IconBell className={'size-4 font-bold transition-colors'} />
 			</button>
 		</div>

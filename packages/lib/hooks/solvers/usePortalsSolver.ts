@@ -1,11 +1,14 @@
 import {useCallback, useMemo, useRef, useState} from 'react';
 import toast from 'react-hot-toast';
 import {BaseError, erc20Abi, isHex, zeroAddress} from 'viem';
+import {useBlockNumber} from 'wagmi';
+import useWallet from '@builtbymom/web3/contexts/useWallet';
 import {useWeb3} from '@builtbymom/web3/contexts/useWeb3';
 import {useAsyncTrigger} from '@builtbymom/web3/hooks/useAsyncTrigger';
 import {
 	assert,
 	assertAddress,
+	formatTAmount,
 	isEthAddress,
 	isZeroAddress,
 	MAX_UINT_256,
@@ -16,8 +19,8 @@ import {
 } from '@builtbymom/web3/utils';
 import {approveERC20, defaultTxStatus, retrieveConfig, toWagmiProvider} from '@builtbymom/web3/utils/wagmi';
 import {useSafeAppsSDK} from '@gnosis.pm/safe-apps-react-sdk';
-import {TransactionStatus} from '@gnosis.pm/safe-apps-sdk';
 import {readContract, sendTransaction, switchChain, waitForTransactionReceipt} from '@wagmi/core';
+import {useNotifications} from '@lib/contexts/useNotifications';
 import {isValidPortalsErrorObject} from '@lib/hooks/helpers/isValidPortalsErrorObject';
 import {useGetIsStablecoin} from '@lib/hooks/helpers/useGetIsStablecoin';
 import {isPermitSupported, signPermit} from '@lib/hooks/usePermit';
@@ -25,6 +28,7 @@ import {getPortalsApproval, getPortalsTx, getQuote, PORTALS_NETWORK} from '@lib/
 import {getApproveTransaction} from '@lib/utils/tools.gnosis';
 import {allowanceKey} from '@yearn-finance/web-lib/utils/helpers';
 
+import type {Hex} from 'viem';
 import type {TAddress, TDict, TNormalizedBN} from '@builtbymom/web3/types';
 import type {TTxResponse} from '@builtbymom/web3/utils/wagmi';
 import type {BaseTransaction} from '@gnosis.pm/safe-apps-sdk';
@@ -45,6 +49,10 @@ export const usePortalsSolver = (
 ): TSolverContextBase<TPortalsEstimate | null> => {
 	const {sdk} = useSafeAppsSDK();
 	const {address, provider, isWalletSafe, chainID} = useWeb3();
+
+	const {addNotification} = useNotifications();
+	const {getToken} = useWallet();
+	const {data: blockNumber} = useBlockNumber();
 
 	const [approvalStatus, set_approvalStatus] = useState(defaultTxStatus);
 	const [depositStatus, set_depositStatus] = useState(defaultTxStatus);
@@ -380,7 +388,29 @@ export const usePortalsSolver = (
 				timeout: 15 * 60 * 1000, // Polygon can be very, VERY, slow. 15mn timeout just to be sure
 				hash
 			});
+
 			if (receipt.status === 'success') {
+				await addNotification({
+					from: receipt.from,
+					fromAddress: toAddress(latestQuote.context.inputToken.split(':')[1]),
+					fromChainId: inputAsset.token.chainID,
+					fromTokenName: inputAsset.token.symbol,
+					fromAmount: formatTAmount({
+						value: toBigInt(latestQuote.context.inputAmount),
+						decimals: inputAsset.token.decimals
+					}),
+					toAddress: toAddress(latestQuote.context.outputToken.split(':')[1]),
+					toChainId: inputAsset.token.chainID,
+					toTokenName: getToken({
+						chainID: inputAsset.token.chainID,
+						address: outputTokenAddress
+					}).symbol,
+					status: 'success',
+					type: 'portals',
+					blockNumber: receipt.blockNumber,
+					safeTxHash: undefined,
+					txHash: receipt.transactionHash
+				});
 				return {isSuccessful: true, receipt: receipt};
 			}
 			console.error('Fail to perform transaction');
@@ -412,7 +442,9 @@ export const usePortalsSolver = (
 		address,
 		slippage,
 		isWalletSafe,
-		permitSignature
+		permitSignature,
+		addNotification,
+		getToken
 	]);
 
 	/**********************************************************************************************
@@ -495,27 +527,31 @@ export const usePortalsSolver = (
 
 			try {
 				const res = await sdk.txs.send({txs: batch});
-				let result;
-				do {
-					if (
-						result?.txStatus === TransactionStatus.CANCELLED ||
-						result?.txStatus === TransactionStatus.FAILED
-					) {
-						throw new Error('An error occured while creating your transaction!');
-					}
+				await addNotification({
+					from: toAddress(address),
+					fromAddress: toAddress(transaction.result.context.inputToken.split(':')[1]),
+					fromChainId: inputAsset.token.chainID,
+					fromTokenName: inputAsset.token.symbol,
+					fromAmount: formatTAmount({
+						value: toBigInt(latestQuote.context.inputAmount),
+						decimals: inputAsset.token.decimals
+					}),
+					toAddress: toAddress(transaction.result.context.outputToken.split(':')[1]),
+					toChainId: inputAsset.token.chainID,
+					toTokenName: getToken({
+						chainID: inputAsset.token.chainID,
+						address: outputTokenAddress
+					}).symbol,
+					status: 'pending',
+					type: 'portals gnosis',
+					blockNumber: blockNumber || 0n,
+					safeTxHash: res.safeTxHash as Hex,
+					txHash: undefined
+				});
 
-					result = await sdk.txs.getBySafeTxHash(res.safeTxHash);
-					await new Promise(resolve => setTimeout(resolve, 30_000));
-				} while (
-					result.txStatus !== 'SUCCESS' &&
-					result.txStatus !== 'FAILED' &&
-					result.txStatus !== 'CANCELLED'
-				);
+				set_depositStatus({...defaultTxStatus, success: true});
 
-				set_depositStatus({...defaultTxStatus, success: result?.txStatus === 'SUCCESS'});
-				if (result?.txStatus === 'SUCCESS') {
-					onSuccess?.();
-				}
+				onSuccess?.();
 			} catch (error) {
 				set_depositStatus({...defaultTxStatus, error: true});
 				toast.error((error as BaseError)?.message || 'An error occured while creating your transaction!');
@@ -533,10 +569,13 @@ export const usePortalsSolver = (
 			inputAsset.normalizedBigAmount?.raw,
 			outputTokenAddress,
 			address,
+			slippage,
 			isWalletSafe,
 			sdk.txs,
-			permitSignature,
-			slippage
+			addNotification,
+			getToken,
+			blockNumber,
+			permitSignature
 		]
 	);
 

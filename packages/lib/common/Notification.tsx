@@ -1,20 +1,30 @@
-import React from 'react';
+import React, {useMemo} from 'react';
 import Image from 'next/image';
-import {cl} from '@builtbymom/web3/utils';
+import Link from 'next/link';
+import {useAsyncTrigger} from '@builtbymom/web3/hooks/useAsyncTrigger';
+import {cl, truncateHex} from '@builtbymom/web3/utils';
+import {useSafeAppsSDK} from '@gnosis.pm/safe-apps-react-sdk';
+import {TransactionStatus} from '@gnosis.pm/safe-apps-sdk';
+import {useNotifications} from '@lib/contexts/useNotifications';
 import {IconArrow} from '@lib/icons/IconArrow';
 import {IconCheck} from '@lib/icons/IconCheck';
 import {IconCross} from '@lib/icons/IconCross';
+import {IconLinkOut} from '@lib/icons/IconLinkOut';
 import {IconLoader} from '@lib/icons/IconLoader';
+import {getLifiStatus} from '@lib/utils/api.lifi';
+import {CHAINS, supportedNetworks} from '@lib/utils/tools.chains';
 
 import {ImageWithFallback} from './ImageWithFallback';
 
 import type {ReactElement} from 'react';
-import type {TNotificationStatus} from '@lib/types/context.useNotifications';
+import type {Hex} from 'viem';
+import type {TNotification, TNotificationStatus} from '@lib/types/context.useNotifications';
+import type {TLifiStatusResponse} from '@lib/utils/api.lifi';
 
 const STATUS: {[key: string]: [string, string, ReactElement]} = {
 	success: ['Success', 'text-green bg-[#C6F4D6]', <IconCheck className={'size-4'} />],
-	pending: ['Pending', 'text-yellow-500', <IconLoader />],
-	error: ['Error', 'text-red-500', <IconCross />]
+	pending: ['Pending', 'text-grey-800 bg-grey-100', <IconLoader className={'size-4 animate-spin'} />],
+	error: ['Error', 'text-red bg-[#FBDADA]', <IconCross className={'size-4'} />]
 };
 
 function NotificationStatus(props: {status: TNotificationStatus}): ReactElement {
@@ -30,22 +40,110 @@ function NotificationStatus(props: {status: TNotificationStatus}): ReactElement 
 	);
 }
 
-export function Notification(): ReactElement {
+export function Notification({
+	id,
+	fromAddress,
+	toAddress,
+	from,
+	fromAmount,
+	fromChainId,
+	toChainId,
+	fromTokenName,
+	toTokenName,
+	type,
+	status,
+	txHash,
+	safeTxHash
+}: TNotification): ReactElement {
+	const {updateEntry} = useNotifications();
+	const fromChainName = supportedNetworks.find(network => network.id === fromChainId)?.name;
+	const toChainName = supportedNetworks.find(network => network.id === toChainId)?.name;
+	const {sdk} = useSafeAppsSDK();
+
+	const explorerLink = useMemo(() => {
+		if (!txHash) {
+			return null;
+		}
+		if (type === 'lifi') {
+			return `https://scan.li.fi/tx/${txHash}`;
+		}
+
+		const chain = CHAINS[fromChainId];
+		const explorerBaseURI = chain?.blockExplorers?.default?.url || 'https://etherscan.io';
+		return `${explorerBaseURI}/tx/${txHash}`;
+	}, [fromChainId, txHash, type]);
+
+	const notificationTitle = useMemo(() => {
+		if (type === 'lifi') {
+			return 'Multichain Zap';
+		}
+		if (type === 'portals') {
+			return 'Zap';
+		}
+
+		return 'Deposit';
+	}, [type]);
+
+	useAsyncTrigger(async () => {
+		if (type === 'lifi' && status === 'pending' && txHash) {
+			let result: TLifiStatusResponse;
+			do {
+				result = await getLifiStatus({
+					fromChainID: Number(fromChainId),
+					toChainID: Number(toChainId),
+					txHash
+				});
+				await new Promise(resolve => setTimeout(resolve, 30_000));
+			} while (result.status !== 'DONE' && result.status !== 'FAILED');
+
+			if (result.status === 'DONE') {
+				await updateEntry({status: 'success'}, Number(id));
+				return;
+			}
+
+			updateEntry({status: 'error'}, Number(id));
+		}
+	}, [fromChainId, id, status, toChainId, txHash, type, updateEntry]);
+
+	useAsyncTrigger(async () => {
+		if (type === 'portals gnosis' && status === 'pending' && safeTxHash) {
+			let result;
+			do {
+				if (result?.txStatus === TransactionStatus.CANCELLED || result?.txStatus === TransactionStatus.FAILED) {
+					throw new Error('An error occured while creating your transaction!');
+				}
+				result = await sdk.txs.getBySafeTxHash(safeTxHash);
+				await new Promise(resolve => setTimeout(resolve, 30_000));
+			} while (
+				result.txStatus !== TransactionStatus.SUCCESS &&
+				result.txStatus !== TransactionStatus.FAILED &&
+				result.txStatus !== TransactionStatus.CANCELLED
+			);
+
+			if (result.txStatus === TransactionStatus.SUCCESS) {
+				await updateEntry({status: 'success', txHash: result.txHash as Hex}, Number(id));
+				return;
+			}
+
+			updateEntry({status: 'error', txHash: result.txHash as Hex}, Number(id));
+		}
+	}, [id, safeTxHash, sdk.txs, status, type, updateEntry]);
+
 	return (
 		<div className={'border-grey-200 rounded-xl border p-4'}>
 			<div className={'mb-4 flex items-center justify-between'}>
-				<p className={'text-grey-900 font-medium'}>{'Multichain Zap'}</p>
-				<NotificationStatus status={'success'} />
+				<p className={'text-grey-900 font-medium'}>{notificationTitle}</p>
+				<NotificationStatus status={status} />
 			</div>
 
 			<div className={'flex gap-8'}>
 				<div className={'flex flex-col items-center gap-2'}>
 					<div className={'relative'}>
 						<ImageWithFallback
-							alt={'WETH'}
+							alt={fromTokenName}
 							unoptimized
-							src={`${process.env.SMOL_ASSETS_URL}/token/${8453}/${'0x4200000000000000000000000000000000000006'}/logo-128.png`}
-							altSrc={`${process.env.SMOL_ASSETS_URL}/token/${8453}/${'0x4200000000000000000000000000000000000006'}/logo-128.png`}
+							src={`${process.env.SMOL_ASSETS_URL}/token/${fromChainId}/${fromAddress}/logo-128.png`}
+							altSrc={`${process.env.SMOL_ASSETS_URL}/token/${fromChainId}/${fromAddress}/logo-128.png`}
 							quality={90}
 							width={32}
 							height={32}
@@ -58,7 +156,7 @@ export function Notification(): ReactElement {
 								width={14}
 								height={14}
 								alt={'chain'}
-								src={`${process.env.SMOL_ASSETS_URL}/chain/${8453}/logo.svg`}
+								src={`${process.env.SMOL_ASSETS_URL}/chain/${fromChainId}/logo.svg`}
 							/>
 						</div>
 					</div>
@@ -67,10 +165,10 @@ export function Notification(): ReactElement {
 
 					<div className={'relative'}>
 						<ImageWithFallback
-							alt={'WETH'}
+							alt={toTokenName}
 							unoptimized
-							src={`${process.env.SMOL_ASSETS_URL}/token/${137}/${'0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619'}/logo-128.png`}
-							altSrc={`${process.env.SMOL_ASSETS_URL}/token/${137}/${'0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619'}/logo-128.png`}
+							src={`${process.env.SMOL_ASSETS_URL}/token/${toChainId}/${toAddress}/logo-128.png`}
+							altSrc={`${process.env.SMOL_ASSETS_URL}/token/${toChainId}/${toAddress}/logo-128.png`}
 							quality={90}
 							width={32}
 							height={32}
@@ -83,23 +181,37 @@ export function Notification(): ReactElement {
 								width={14}
 								height={14}
 								alt={'chain'}
-								src={`${process.env.SMOL_ASSETS_URL}/chain/${137}/logo.svg`}
+								src={`${process.env.SMOL_ASSETS_URL}/chain/${toChainId}/logo.svg`}
 							/>
 						</div>
 					</div>
 				</div>
 				<div>
-					<div className={'grid grid-cols-2 grid-rows-6 gap-x-8'}>
-						<p className={'text-grey-800 font text-xs'}>{'From:'}</p>
-						<p className={'text-grey-800 text-xs font-bold'}>{'150 WETH'}</p>
-						<p className={'text-grey-800 text-xs'}>{'To:'}</p>
-						<p className={'text-grey-800 text-xs font-bold'}>{'WETH Vault'}</p>
-						<p className={'text-grey-800 text-xs'}>{'From chain:'}</p>
-						<p className={'text-grey-800 text-xs font-bold'}>{'Arbitrum'}</p>
-						<p className={'text-grey-800 text-xs'}>{'To Chain:'}</p>
-						<p className={'text-grey-800 text-xs font-bold'}>{'Polygon'}</p>
-						<p className={'text-grey-800 text-xs'}>{'Min amount:'}</p>
-						<p className={'text-grey-800 text-xs font-bold'}>{'148.5 yvWETH'}</p>
+					<div className={'text-grey-800 grid grid-cols-2 grid-rows-6 gap-x-8 text-xs'}>
+						<p>{'From:'}</p>
+						<p className={'font-bold'}>{truncateHex(from, 5)}</p>
+						<p>{'Amount:'}</p>
+						<p className={'font-bold'}>{`${fromAmount} ${fromTokenName}`}</p>
+						<p>{'To:'}</p>
+						<p className={'font-bold'}>
+							{toTokenName}
+							{' Vault'}
+						</p>
+						<p>{'From chain:'}</p>
+						<p className={'font-bold'}>{fromChainName}</p>
+						<p>{'To Chain:'}</p>
+						<p className={'font-bold'}>{toChainName}</p>
+						{explorerLink ? (
+							<Link
+								className={'hover:underline'}
+								href={explorerLink}
+								target={'_blank'}>
+								<button className={'flex gap-1 text-xs '}>
+									{'View details'}
+									<IconLinkOut className={'size-4'} />
+								</button>
+							</Link>
+						) : null}
 					</div>
 				</div>
 			</div>

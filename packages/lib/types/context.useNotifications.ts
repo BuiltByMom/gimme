@@ -1,15 +1,22 @@
+import type {Hex} from 'viem';
+import type {TAddress} from '@builtbymom/web3/types';
+
 export type TNotificationStatus = 'pending' | 'success' | 'error';
 
 export type TNotification = {
-	id: number;
-	fromAddress: string;
+	id?: number;
+	from: TAddress;
+	fromAddress: TAddress;
 	fromChainId: number;
 	fromTokenName: string;
 	fromAmount: string;
-	toAddress: string;
+	toAddress: TAddress;
 	toChainId: number;
 	toTokenName: string;
-	toAmount: string;
+	type: 'vanila' | 'lifi' | 'portals' | 'portals gnosis';
+	txHash: Hex | undefined;
+	safeTxHash: Hex | undefined;
+	blockNumber: bigint;
 	status: TNotificationStatus;
 };
 
@@ -19,7 +26,7 @@ export type TNotificationsContext = {
 	shouldOpenCurtain: boolean;
 	cachedEntries: TNotification[];
 	deleteByID: (id: number) => Promise<void>;
-	updateStatus: (value: TNotificationStatus, id: number) => Promise<void>;
+	updateEntry: (value: Partial<TNotification>, id: number) => Promise<void>;
 	addNotification: (value: TNotification) => Promise<void>;
 	set_shouldOpenCurtain: (value: boolean) => void;
 };
