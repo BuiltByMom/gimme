@@ -8,6 +8,7 @@ import {useAsyncTrigger} from '@builtbymom/web3/hooks/useAsyncTrigger';
 import {
 	assert,
 	assertAddress,
+	ETH_TOKEN_ADDRESS,
 	formatTAmount,
 	isEthAddress,
 	isZeroAddress,
@@ -392,7 +393,9 @@ export const usePortalsSolver = (
 			if (receipt.status === 'success') {
 				await addNotification({
 					from: receipt.from,
-					fromAddress: toAddress(latestQuote.context.inputToken.split(':')[1]),
+					fromAddress: isZeroAddress(latestQuote.context.inputToken.split(':')[1])
+						? ETH_TOKEN_ADDRESS
+						: toAddress(latestQuote.context.inputToken.split(':')[1]),
 					fromChainId: inputAsset.token.chainID,
 					fromTokenName: inputAsset.token.symbol,
 					fromAmount: formatTAmount({

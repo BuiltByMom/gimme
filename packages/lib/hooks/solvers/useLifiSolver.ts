@@ -6,8 +6,10 @@ import {useWeb3} from '@builtbymom/web3/contexts/useWeb3';
 import {useAsyncTrigger} from '@builtbymom/web3/hooks/useAsyncTrigger';
 import {
 	assert,
+	ETH_TOKEN_ADDRESS,
 	formatTAmount,
 	isEthAddress,
+	isZeroAddress,
 	MAX_UINT_256,
 	toAddress,
 	toBigInt,
@@ -279,7 +281,9 @@ export const useLifiSolver = (
 				const currentTimestamp = Math.floor(Date.now() / 1000);
 				await addNotification({
 					from: receipt.from,
-					fromAddress: toAddress(latestQuote.action.fromToken.address),
+					fromAddress: isZeroAddress(latestQuote.action.fromToken.address)
+						? ETH_TOKEN_ADDRESS
+						: toAddress(latestQuote.action.fromToken.address),
 					fromChainId: latestQuote.action.fromChainId,
 					fromTokenName: latestQuote.action.fromToken.symbol,
 					fromAmount: formatTAmount({
