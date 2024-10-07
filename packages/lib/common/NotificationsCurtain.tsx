@@ -1,7 +1,7 @@
 import {type ReactElement, useMemo} from 'react';
 import {Drawer} from 'vaul';
 import {useNotifications} from '@lib/contexts/useNotifications';
-import {IconChevron} from '@lib/icons/IconChevron';
+import {IconCross} from '@lib/icons/IconCross';
 
 import {Notification} from './Notification';
 
@@ -29,10 +29,13 @@ export function NotificationsCurtain(props: {
 						}>
 						<div className={'h-full'}>
 							<div className={'mb-4 flex items-center justify-between'}>
-								<Drawer.Close className={'hover:bg-grey-200 rounded-full p-1'}>
-									<IconChevron className={'size-6'} />
+								<Drawer.Title className={'text-grey-900 font-bold'}>{'Notifications'}</Drawer.Title>
+								<Drawer.Close
+									className={
+										'rounded-full p-1 text-neutral-900 transition-colors hover:text-neutral-600'
+									}>
+									<IconCross className={'size-4'} />
 								</Drawer.Close>
-								<Drawer.Title className={'font-medium'}>{'Notifications'}</Drawer.Title>
 							</div>
 							<div className={'h-[94.5%] overflow-y-auto overflow-x-hidden'}>
 								{isEmpty ? (
