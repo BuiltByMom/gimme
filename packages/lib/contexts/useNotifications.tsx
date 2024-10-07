@@ -3,11 +3,13 @@ import {useIndexedDBStore} from 'use-indexeddb';
 import {useAsyncTrigger} from '@builtbymom/web3/hooks/useAsyncTrigger';
 import {NotificationsCurtain} from '@lib/common/NotificationsCurtain';
 
-import type {TNotification, TNotificationsContext} from '@lib/types/context.useNotifications';
+import type {TNotification, TNotificationsContext, TNotificationStatus} from '@lib/types/context.useNotifications';
 
 const defaultProps: TNotificationsContext = {
 	shouldOpenCurtain: false,
 	cachedEntries: [],
+	notificationStatus: null,
+	set_notificationStatus: (): void => undefined,
 	deleteByID: async (): Promise<void> => undefined,
 	updateEntry: async (): Promise<void> => undefined,
 	addNotification: async (): Promise<void> => undefined,
@@ -18,6 +20,11 @@ const NotificationsContext = createContext<TNotificationsContext>(defaultProps);
 export const WithNotifications = ({children}: {children: React.ReactElement}): React.ReactElement => {
 	const [cachedEntries, set_cachedEntries] = useState<TNotification[]>([]);
 	const [entryNonce, set_entryNonce] = useState<number>(0);
+
+	/**************************************************************************
+	 * State that is used to store latest added/updated notification status
+	 *************************************************************************/
+	const [notificationStatus, set_notificationStatus] = useState<TNotificationStatus | null>(null);
 
 	const [shouldOpenCurtain, set_shouldOpenCurtain] = useState(false);
 	const {add, getAll, update, deleteByID, getByID} = useIndexedDBStore<TNotification>('notifications');
@@ -35,6 +42,7 @@ export const WithNotifications = ({children}: {children: React.ReactElement}): R
 			if (notification) {
 				await update({...notification, ...entry});
 				set_entryNonce(nonce => nonce + 1);
+				set_notificationStatus(entry?.status || null);
 			}
 		},
 		[getByID, update]
@@ -44,6 +52,7 @@ export const WithNotifications = ({children}: {children: React.ReactElement}): R
 		async (notification: TNotification) => {
 			await add(notification);
 			set_entryNonce(nonce => nonce + 1);
+			set_notificationStatus(notification.status);
 		},
 		[add]
 	);
@@ -58,9 +67,11 @@ export const WithNotifications = ({children}: {children: React.ReactElement}): R
 			deleteByID,
 			updateEntry,
 			addNotification,
+			notificationStatus,
+			set_notificationStatus,
 			set_shouldOpenCurtain
 		}),
-		[shouldOpenCurtain, cachedEntries, deleteByID, updateEntry, addNotification]
+		[shouldOpenCurtain, cachedEntries, deleteByID, updateEntry, addNotification, notificationStatus]
 	);
 
 	return (

@@ -52,7 +52,7 @@ function WalletSection(): ReactElement {
 	const {openAccountModal} = useAccountModal();
 	const {address, ens, clusters, openLoginModal} = useWeb3();
 
-	const {set_shouldOpenCurtain} = useNotifications();
+	const {set_shouldOpenCurtain, cachedEntries, notificationStatus} = useNotifications();
 
 	const router = useRouter();
 	const currentPage = router.pathname;
@@ -73,6 +73,22 @@ function WalletSection(): ReactElement {
 		}
 		return truncateHex(address, 5);
 	}, [address, clusters, ens]);
+
+	const notificationDotColor = useMemo(() => {
+		if (cachedEntries.find(entry => entry.status === 'pending')) {
+			return 'bg-primary';
+		}
+
+		if (notificationStatus === 'error') {
+			return 'bg-red';
+		}
+
+		if (notificationStatus === 'success') {
+			return 'bg-green';
+		}
+
+		return '';
+	}, [cachedEntries, notificationStatus]);
 
 	if (!address) {
 		return (
@@ -99,9 +115,11 @@ function WalletSection(): ReactElement {
 				{buttonLabel}
 			</button>
 			<button
-				className={'hover:bg-grey-200 rounded-full p-1 transition-colors'}
+				className={'hover:bg-grey-200 relative rounded-full p-2 transition-colors'}
 				onClick={(): void => set_shouldOpenCurtain(true)}>
 				<IconBell className={'text-grey-900 size-4 font-bold transition-colors'} />
+
+				<div className={cl('absolute right-1 top-1 size-2 rounded-full', notificationDotColor)} />
 			</button>
 		</div>
 	);

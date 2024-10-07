@@ -25,6 +25,8 @@ export type TCurtainStatus = {isOpen: boolean};
 export type TNotificationsContext = {
 	shouldOpenCurtain: boolean;
 	cachedEntries: TNotification[];
+	notificationStatus: TNotificationStatus | null;
+	set_notificationStatus: (value: TNotificationStatus | null) => void;
 	deleteByID: (id: number) => Promise<void>;
 	updateEntry: (value: Partial<TNotification>, id: number) => Promise<void>;
 	addNotification: (value: TNotification) => Promise<void>;

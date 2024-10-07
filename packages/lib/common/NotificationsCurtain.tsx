@@ -1,4 +1,4 @@
-import {type ReactElement, useMemo} from 'react';
+import {type ReactElement, useEffect, useMemo} from 'react';
 import {Drawer} from 'vaul';
 import {useNotifications} from '@lib/contexts/useNotifications';
 import {IconCross} from '@lib/icons/IconCross';
@@ -9,13 +9,23 @@ export function NotificationsCurtain(props: {
 	set_shouldOpenCurtain: (value: boolean) => void;
 	isOpen: boolean;
 }): ReactElement {
-	const {cachedEntries} = useNotifications();
+	const {cachedEntries, set_notificationStatus} = useNotifications();
 	const isEmpty = cachedEntries.length === 0;
 
 	const sortedEntries = useMemo(
 		() => cachedEntries.slice().sort((a, b) => Number(b.blockNumber - a.blockNumber)),
 		[cachedEntries]
 	);
+
+	/*************************************************************************************
+	 * Clear top bar notification status when drawer is triggered
+	 *******************************************************************/
+	useEffect(() => {
+		if (props.isOpen) {
+			set_notificationStatus(null);
+		}
+	}, [props.isOpen, set_notificationStatus]);
+
 	return (
 		<Drawer.Root
 			direction={'right'}
