@@ -241,6 +241,7 @@ export const useVanilaSolver = (
 						toTokenName: vault.token.symbol,
 						status: 'success',
 						type: 'vanila',
+						timeFinished: Date.now() / 1000,
 						blockNumber: result.receipt?.blockNumber || 0n,
 						safeTxHash: undefined,
 						txHash: result.receipt?.transactionHash

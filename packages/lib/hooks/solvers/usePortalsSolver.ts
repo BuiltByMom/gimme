@@ -405,6 +405,7 @@ export const usePortalsSolver = (
 						chainID: inputAsset.token.chainID,
 						address: outputTokenAddress
 					}).symbol,
+					timeFinished: Date.now() / 1000,
 					status: 'success',
 					type: 'portals',
 					blockNumber: receipt.blockNumber,
@@ -542,6 +543,7 @@ export const usePortalsSolver = (
 						chainID: inputAsset.token.chainID,
 						address: outputTokenAddress
 					}).symbol,
+					timeFinished: Date.now() / 1000,
 					status: 'pending',
 					type: 'portals gnosis',
 					blockNumber: blockNumber || 0n,

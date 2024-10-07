@@ -276,6 +276,7 @@ export const useLifiSolver = (
 			});
 
 			if (receipt.status === 'success') {
+				const currentTimestamp = Math.floor(Date.now() / 1000);
 				await addNotification({
 					from: receipt.from,
 					fromAddress: toAddress(latestQuote.action.fromToken.address),
@@ -288,7 +289,8 @@ export const useLifiSolver = (
 					toAddress: toAddress(latestQuote.action.toToken.address),
 					toChainId: latestQuote.action.toChainId,
 					toTokenName: latestQuote.action.toToken.symbol,
-					status: 'pending',
+					timeFinished: currentTimestamp + latestQuote.estimate.executionDuration,
+					status: 'pending', // tx is pending until funds are received on the destination chain
 					type: 'lifi',
 					blockNumber: receipt.blockNumber,
 					txHash: receipt.transactionHash,

@@ -9,7 +9,6 @@ import {useNotifications} from '@lib/contexts/useNotifications';
 import {IconArrow} from '@lib/icons/IconArrow';
 import {IconCheck} from '@lib/icons/IconCheck';
 import {IconCross} from '@lib/icons/IconCross';
-import {IconLinkOut} from '@lib/icons/IconLinkOut';
 import {IconLoader} from '@lib/icons/IconLoader';
 import {getLifiStatus} from '@lib/utils/api.lifi';
 import {CHAINS, supportedNetworks} from '@lib/utils/tools.chains';
@@ -53,12 +52,22 @@ export function Notification({
 	type,
 	status,
 	txHash,
+	timeFinished,
 	safeTxHash
 }: TNotification): ReactElement {
 	const {updateEntry} = useNotifications();
 	const fromChainName = supportedNetworks.find(network => network.id === fromChainId)?.name;
 	const toChainName = supportedNetworks.find(network => network.id === toChainId)?.name;
 	const {sdk} = useSafeAppsSDK();
+
+	const date = new Date((timeFinished || 0) * 1000);
+	const formattedDate = date.toLocaleDateString('en-US', {
+		year: 'numeric',
+		month: 'short',
+		day: 'numeric',
+		hour: 'numeric',
+		minute: 'numeric'
+	});
 
 	const explorerLink = useMemo(() => {
 		if (!txHash) {
@@ -97,11 +106,11 @@ export function Notification({
 			} while (result.status !== 'DONE' && result.status !== 'FAILED');
 
 			if (result.status === 'DONE') {
-				await updateEntry({status: 'success'}, Number(id));
+				await updateEntry({status: 'success', timeFinished: Date.now() / 1000}, Number(id));
 				return;
 			}
 
-			updateEntry({status: 'error'}, Number(id));
+			updateEntry({status: 'error', timeFinished: Date.now() / 1000}, Number(id));
 		}
 	}, [fromChainId, id, status, toChainId, txHash, type, updateEntry]);
 
@@ -121,11 +130,14 @@ export function Notification({
 			);
 
 			if (result.txStatus === TransactionStatus.SUCCESS) {
-				await updateEntry({status: 'success', txHash: result.txHash as Hex}, Number(id));
+				await updateEntry(
+					{status: 'success', txHash: result.txHash as Hex, timeFinished: Date.now() / 1000},
+					Number(id)
+				);
 				return;
 			}
 
-			updateEntry({status: 'error', txHash: result.txHash as Hex}, Number(id));
+			updateEntry({status: 'error', txHash: result.txHash as Hex, timeFinished: Date.now() / 1000}, Number(id));
 		}
 	}, [id, safeTxHash, sdk.txs, status, type, updateEntry]);
 
@@ -187,7 +199,7 @@ export function Notification({
 					</div>
 				</div>
 				<div>
-					<div className={'text-grey-800 grid grid-cols-2 grid-rows-6 gap-x-8 text-xs'}>
+					<div className={'text-grey-800 grid grid-cols-2 grid-rows-7 gap-x-8 text-xs'}>
 						<p>{'From:'}</p>
 						<p className={'font-bold'}>{truncateHex(from, 5)}</p>
 						<p>{'Amount:'}</p>
@@ -201,16 +213,21 @@ export function Notification({
 						<p className={'font-bold'}>{fromChainName}</p>
 						<p>{'To Chain:'}</p>
 						<p className={'font-bold'}>{toChainName}</p>
+						<p>{status === 'success' ? 'Finalized:' : 'Finalizes:'}</p>
+						<p className={'font-bold'}>{formattedDate}</p>
 						{explorerLink ? (
-							<Link
-								className={'hover:underline'}
-								href={explorerLink}
-								target={'_blank'}>
-								<button className={'flex gap-1 text-xs '}>
-									{'View details'}
-									<IconLinkOut className={'size-4'} />
-								</button>
-							</Link>
+							<>
+								<p>{'Transaction:'}</p>
+								<Link
+									href={explorerLink}
+									target={'_blank'}>
+									<button className={'font-bold hover:underline'}>
+										{txHash?.slice(0, 6)}
+										{'...'}
+										{txHash?.slice(-5)}
+									</button>
+								</Link>
+							</>
 						) : null}
 					</div>
 				</div>

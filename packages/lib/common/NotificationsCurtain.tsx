@@ -13,7 +13,7 @@ export function NotificationsCurtain(props: {
 	const isEmpty = cachedEntries.length === 0;
 
 	const sortedEntries = useMemo(
-		() => cachedEntries.slice().sort((a, b) => Number(b.blockNumber - a.blockNumber)),
+		() => cachedEntries.slice().sort((a, b) => Number((b.timeFinished || 0) - (a.timeFinished || 0))),
 		[cachedEntries]
 	);
 

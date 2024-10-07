@@ -15,6 +15,7 @@ export type TNotification = {
 	toTokenName: string;
 	type: 'vanila' | 'lifi' | 'portals' | 'portals gnosis';
 	txHash: Hex | undefined;
+	timeFinished?: number;
 	safeTxHash: Hex | undefined;
 	blockNumber: bigint;
 	status: TNotificationStatus;
