@@ -58,30 +58,40 @@ export function VaultRow(props: {
 		}
 	};
 
-	const onWithdraw = (): void => {
-		dispatchConfiguration({
-			type: 'SET_CONFIGURATION',
-			payload: {
-				vault: props.vault,
-				asset: {
-					UUID: crypto.randomUUID(),
-					amount: props.balance.display,
-					normalizedBigAmount: props.balance,
-					status: 'none',
-					isValid: true,
-					error: undefined,
-					token: {
+	const onWithdraw = async (): Promise<void> => {
+		try {
+			dispatchConfiguration({
+				type: 'SET_CONFIGURATION',
+				payload: {
+					vault: props.vault,
+					asset: {
+						UUID: crypto.randomUUID(),
+						amount: props.balance.display,
+						normalizedBigAmount: props.balance,
+						status: 'none',
+						isValid: true,
+						error: undefined,
+						token: {
+							...props.vault.token,
+							chainID: props.vault.chainID,
+							value: 0,
+							balance: props.balance
+						}
+					},
+					tokenToReceive: {
 						...props.vault.token,
 						chainID: props.vault.chainID,
 						value: 0,
 						balance: props.balance
 					}
-				},
-				tokenToReceive: {...props.vault.token, chainID: props.vault.chainID, value: 0, balance: props.balance}
-			}
-		});
-		plausible(PLAUSIBLE_EVENTS.OPEN_WITHDRAW_MODAL);
-		props.onWithdrawModalChange(true);
+				}
+			});
+			plausible(PLAUSIBLE_EVENTS.OPEN_WITHDRAW_MODAL);
+			await switchChainAsync({connector, chainId: props.vault.chainID});
+			props.onWithdrawModalChange(true);
+		} catch (err) {
+			console.log(err);
+		}
 	};
 
 	return (

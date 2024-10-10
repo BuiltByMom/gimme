@@ -1,4 +1,5 @@
 import {Fragment, type ReactElement, useCallback, useMemo, useState} from 'react';
+import {useWeb3} from '@builtbymom/web3/contexts/useWeb3';
 import {cl, formatPercent, numberSort, zeroNormalizedBN} from '@builtbymom/web3/utils';
 import {Dialog, DialogPanel, Transition, TransitionChild} from '@headlessui/react';
 import * as Popover from '@radix-ui/react-popover';
@@ -170,6 +171,7 @@ export function SelectVault({
 	onSelect: (value: TYDaemonVault) => void;
 	availableVaults: TYDaemonVault[];
 }): ReactElement {
+	const {chainID} = useWeb3();
 	const {configuration} = useDepositSolver();
 	const {getPrice} = usePrices();
 	const [vaultInfo, set_vaultInfo] = useState<TVaultInfoModal>(undefined);
@@ -206,6 +208,11 @@ export function SelectVault({
 			})
 		);
 	}, [filteredVaults, sortDirection]);
+
+	const filteredByChain = useMemo(() => {
+		return sortedVaults.filter(vault => vault.chainID === chainID);
+	}, [chainID, sortedVaults]);
+	const isEmpty = filteredByChain.length === 0;
 
 	const onChangeSort = useCallback(() => {
 		if (sortDirection === '') {
@@ -323,16 +330,24 @@ export function SelectVault({
 													</div>
 												</div>
 												<div className={'scrollable flex size-full flex-col gap-2 md:h-96'}>
-													{sortedVaults.map(vault => (
-														<Vault
-															key={`${vault.address}-${vault.chainID}`}
-															vault={vault}
-															assetPrice={assetPrice}
-															onSelect={onSelect}
-															onClose={onClose}
-															onChangeVaultInfo={set_vaultInfo}
-														/>
-													))}
+													{isEmpty ? (
+														<p className={'text-grey-700 mt-20'}>
+															{
+																'Sorry! No opportunities found. Try switching the network.'
+															}
+														</p>
+													) : (
+														filteredByChain.map(vault => (
+															<Vault
+																key={`${vault.address}-${vault.chainID}`}
+																vault={vault}
+																assetPrice={assetPrice}
+																onSelect={onSelect}
+																onClose={onClose}
+																onChangeVaultInfo={set_vaultInfo}
+															/>
+														))
+													)}
 												</div>
 											</DialogPanel>
 
