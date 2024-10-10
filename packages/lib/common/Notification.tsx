@@ -92,7 +92,15 @@ export function Notification({
 
 		return 'Deposit';
 	}, [type]);
-
+	/************************************************************************************************
+	 * useAsyncTrigger in this component:
+	 * 1. For 'lifi' transactions:
+	 *    - It polls the getLifiStatus function every 30 seconds if the transaction is pending.
+	 *    - Once the transaction is done or failed, it updates the entry's status accordingly.
+	 * 2. For 'portals gnosis' transactions:
+	 *    - It polls the Safe SDK's getBySafeTxHash method every 30 seconds for pending transactions.
+	 *    - It updates the entry's status based on the transaction's final state.
+	 ************************************************************************************************/
 	useAsyncTrigger(async () => {
 		if (type === 'lifi' && status === 'pending' && txHash) {
 			let result: TLifiStatusResponse;

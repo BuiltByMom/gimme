@@ -59,6 +59,14 @@ export const VaultsContextApp = memo(function VaultsContextApp({children}: {chil
 
 	const {balances, isLoading: isLoadingBalance, getBalance} = useWallet();
 	const {getStakingTokenBalance} = useStakingTokens(gimmeVaultsDict);
+
+	/************************************************************************************************
+	 * This useMemo hook calculates and returns the user's vaults based on their balances.
+	 * It iterates through all networks and tokens in the user's balances, checking if each token
+	 * corresponds to a vault in the gimmeVaultsDict. For each matching vault, it calculates the
+	 * total balance by summing the regular balance and staking balance (if available).
+	 * Only vaults with a positive total balance are included in the result.
+	 ************************************************************************************************/
 	const userVaults = useMemo(() => {
 		const result: TDict<TYDaemonVault> = {};
 		for (const eachNetwork of Object.values(balances)) {

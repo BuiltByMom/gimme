@@ -79,6 +79,7 @@ export const usePortalsSolver = (
 	}, [inputAsset.amount, inputAsset.token, isBridgeNeeded, isZapNeeded, outputTokenAddress]);
 
 	const {getIsStablecoin} = useGetIsStablecoin();
+
 	const onRetrieveQuote = useCallback(async () => {
 		if (!inputAsset.token || !outputTokenAddress || inputAsset.normalizedBigAmount === zeroNormalizedBN) {
 			return;

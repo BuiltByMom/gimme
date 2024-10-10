@@ -60,6 +60,24 @@ export const useLifiSolver = (
 		return !inputAsset.token || !inputAsset.amount || !outputTokenAddress || !isBridgeNeeded || !address;
 	}, [address, inputAsset.amount, inputAsset.token, isBridgeNeeded, outputTokenAddress]);
 
+	/**********************************************************************************************
+	 ** This useCallback hook is used to retrieve a quote from the LiFi API.
+	 ** It takes the input asset, output token address, output vault asset, output token chain ID,
+	 ** and spend amount as parameters.
+	 ** If any of these parameters are missing or the spend amount is zero, the function returns.
+	 ** It calculates the from token address based on whether the input asset is an ETH token.
+	 ** Then, it creates a configuration object with the necessary parameters for the quote request.
+	 ** To successfully retrieve a quote for multichain zap, we should:
+	 ** - Fetch quote for bridging the input token to the underlying token of the output vault
+	 **   to understand the minimum amount user will receive
+	 ** - Get approve tx data to be executed on the lifi side when sending the tx
+	 ** - Get deposit tx data so 'deposit' function was executed on the lifi side when sending the tx
+	 ** - Build contractCallsQuoteRequest with the approve and deposit tx data. Fetching it will return
+	 **   the final quote will help of wich it is possible to perform 3 tx on the lifi side:
+	 **   1. bridge
+	 **   2. approve
+	 **   3. deposit
+	 *********************************************************************************************/
 	const onRetrieveQuote = useCallback(async () => {
 		if (
 			!inputAsset.token ||

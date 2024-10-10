@@ -29,12 +29,33 @@ export const WithNotifications = ({children}: {children: React.ReactElement}): R
 	const [shouldOpenCurtain, set_shouldOpenCurtain] = useState(false);
 	const {add, getAll, update, deleteByID, getByID} = useIndexedDBStore<TNotification>('notifications');
 
+	/************************************************************************************************
+	 * This useAsyncTrigger hook is responsible for fetching all notifications from the IndexedDB
+	 * and updating the cached entries state whenever the entryNonce changes. This ensures that
+	 * the component always displays the most up-to-date notifications.
+	 *
+	 * The entryNonce is used as a dependency to trigger the effect, allowing for manual refreshes
+	 * of the notification list when needed (e.g., after adding or updating a notification).
+	 ************************************************************************************************/
 	useAsyncTrigger(async (): Promise<void> => {
 		entryNonce;
 		const entriesFromDB = await getAll();
 		set_cachedEntries(entriesFromDB);
 	}, [getAll, entryNonce]);
 
+	/************************************************************************************************
+	 * The updateEntry function is responsible for updating an existing notification in the IndexedDB.
+	 * It takes a partial notification object and an ID as parameters.
+	 *
+	 * The function performs the following steps:
+	 * 1. Retrieves the existing notification from the database using the provided ID.
+	 * 2. If the notification exists, it merges the new data with the existing notification.
+	 * 3. Updates the notification in the database.
+	 * 4. Increments the entryNonce to trigger a refresh of the cached entries.
+	 * 5. Updates the notificationStatus with the new status, if provided.
+	 *
+	 * This function is memoized using useCallback to optimize performance.
+	 ************************************************************************************************/
 	const updateEntry = useCallback(
 		async (entry: Partial<TNotification>, id: number) => {
 			const notification = await getByID(id);

@@ -59,6 +59,14 @@ export function VaultRow(props: {
 		}
 	};
 
+	/************************************************************************************************
+	 * Function to handle the withdrawal process for a vault
+	 * It sets up the configuration for the withdrawal, including:
+	 * - The selected vault
+	 * - The asset to be withdrawn (amount, token details)
+	 * - The token to be received after withdrawal
+	 * It also triggers a Plausible event for analytics and opens the withdrawal modal
+	 ************************************************************************************************/
 	const onWithdraw = (): void => {
 		dispatchConfiguration({
 			type: 'SET_CONFIGURATION',
