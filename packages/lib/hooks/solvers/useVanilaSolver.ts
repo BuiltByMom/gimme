@@ -16,6 +16,7 @@ import {approveERC20, defaultTxStatus, retrieveConfig} from '@builtbymom/web3/ut
 import {useSafeAppsSDK} from '@gnosis.pm/safe-apps-react-sdk';
 import {TransactionStatus} from '@gnosis.pm/safe-apps-sdk';
 import {readContract, switchChain} from '@wagmi/core';
+import {useNotifications} from '@lib/contexts/useNotifications';
 import {isPermitSupported, signPermit} from '@lib/hooks/usePermit';
 import {YEARN_4626_ROUTER_ABI} from '@lib/utils/abi/yearn4626Router.abi';
 import {deposit, depositViaRouter, redeemV3Shares, withdrawShares} from '@lib/utils/actions';
@@ -47,6 +48,8 @@ export const useVanilaSolver = (
 	const [allowance, set_allowance] = useState<TNormalizedBN>(zeroNormalizedBN);
 	const isAboveAllowance = allowance.raw >= inputAsset.normalizedBigAmount.raw;
 	const [permitSignature, set_permitSignature] = useState<TPermitSignature | undefined>(undefined);
+
+	const {addNotification} = useNotifications();
 
 	/**********************************************************************************************
 	 ** The isV3Vault hook is used to determine if the current vault is a V3 vault. It's very
@@ -227,9 +230,27 @@ export const useVanilaSolver = (
 				}
 
 				if (result.isSuccessful) {
+					await addNotification({
+						from: toAddress(address),
+						fromAddress: toAddress(inputAsset.token.address),
+						fromChainId: inputAsset.token.chainID,
+						fromTokenName: inputAsset.token.symbol,
+						fromAmount: inputAsset.normalizedBigAmount.normalized.toString(),
+						toAddress: toAddress(vault?.address),
+						toChainId: inputAsset.token.chainID,
+						toTokenName: vault.token.symbol,
+						status: 'success',
+						type: 'vanila',
+						timeFinished: Date.now() / 1000,
+						blockNumber: result.receipt?.blockNumber || 0n,
+						safeTxHash: undefined,
+						txHash: result.receipt?.transactionHash
+					});
+
 					onSuccess();
 					onRetrieveAllowance();
 					set_depositStatus({...defaultTxStatus, success: true});
+
 					return;
 				}
 				set_depositStatus({...defaultTxStatus, error: true});
@@ -244,13 +265,18 @@ export const useVanilaSolver = (
 			}
 		},
 		[
-			inputAsset.normalizedBigAmount.raw,
+			vault?.address,
+			vault?.token.symbol,
 			inputAsset.token?.address,
 			inputAsset.token?.chainID,
-			onRetrieveAllowance,
-			vault?.address,
+			inputAsset.token?.symbol,
+			inputAsset.normalizedBigAmount.raw,
+			inputAsset.normalizedBigAmount.normalized,
 			permitSignature,
-			provider
+			provider,
+			addNotification,
+			address,
+			onRetrieveAllowance
 		]
 	);
 

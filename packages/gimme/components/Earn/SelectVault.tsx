@@ -274,7 +274,7 @@ export function SelectVault({
 													'w-full p-2 h-[100vh] md:h-auto flex flex-col items-center justify-center'
 												)}>
 												<div className={'flex w-full items-start justify-between p-4'}>
-													<p className={'text-grey-900 font-bold'}>{'Select Token'}</p>
+													<p className={'text-grey-900 font-bold'}>{'Select Opportunity'}</p>
 
 													<button
 														className={'group'}

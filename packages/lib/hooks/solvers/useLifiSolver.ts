@@ -6,7 +6,10 @@ import {useWeb3} from '@builtbymom/web3/contexts/useWeb3';
 import {useAsyncTrigger} from '@builtbymom/web3/hooks/useAsyncTrigger';
 import {
 	assert,
+	ETH_TOKEN_ADDRESS,
+	formatTAmount,
 	isEthAddress,
+	isZeroAddress,
 	MAX_UINT_256,
 	toAddress,
 	toBigInt,
@@ -17,7 +20,7 @@ import {
 import {approveERC20, defaultTxStatus, retrieveConfig, toWagmiProvider} from '@builtbymom/web3/utils/wagmi';
 import {getContractCallsQuote, getQuote} from '@lifi/sdk';
 import {readContract, sendTransaction, switchChain, waitForTransactionReceipt} from '@wagmi/core';
-import {getLifiStatus, type TLifiStatusResponse} from '@lib/utils/api.lifi';
+import {useNotifications} from '@lib/contexts/useNotifications';
 import {createUniqueID} from '@lib/utils/tools.identifiers';
 
 import type {TAddress, TNormalizedBN, TToken} from '@builtbymom/web3/types';
@@ -43,6 +46,8 @@ export const useLifiSolver = (
 	const spendAmount = inputAsset.normalizedBigAmount?.raw ?? 0n;
 	const isAboveAllowance = allowance.raw >= spendAmount;
 	const uniqueIdentifier = useRef<string | undefined>(undefined);
+
+	const {addNotification} = useNotifications();
 
 	/**********************************************************************************************
 	 ** It's important not to make extra fetches. For this solver we should disable quote and
@@ -271,16 +276,30 @@ export const useLifiSolver = (
 				timeout: 15 * 60 * 1000, // Polygon can be very, VERY, slow. 15mn timeout just to be sure
 				hash
 			});
+
 			if (receipt.status === 'success') {
-				let result: TLifiStatusResponse;
-				do {
-					result = await getLifiStatus({
-						fromChainID: inputAsset.token.chainID,
-						toChainID: Number(outputTokenChainId),
-						txHash: receipt.transactionHash
-					});
-					await new Promise(resolve => setTimeout(resolve, 5000));
-				} while (result.status !== 'DONE' && result.status !== 'FAILED');
+				const currentTimestamp = Math.floor(Date.now() / 1000);
+				await addNotification({
+					from: receipt.from,
+					fromAddress: isZeroAddress(latestQuote.action.fromToken.address)
+						? ETH_TOKEN_ADDRESS
+						: toAddress(latestQuote.action.fromToken.address),
+					fromChainId: latestQuote.action.fromChainId,
+					fromTokenName: latestQuote.action.fromToken.symbol,
+					fromAmount: formatTAmount({
+						value: toBigInt(latestQuote.action.fromAmount),
+						decimals: latestQuote.action.fromToken.decimals
+					}),
+					toAddress: toAddress(latestQuote.action.toToken.address),
+					toChainId: latestQuote.action.toChainId,
+					toTokenName: latestQuote.action.toToken.symbol,
+					timeFinished: currentTimestamp + latestQuote.estimate.executionDuration,
+					status: 'pending', // tx is pending until funds are received on the destination chain
+					type: 'lifi',
+					blockNumber: receipt.blockNumber,
+					txHash: receipt.transactionHash,
+					safeTxHash: undefined
+				});
 
 				return {isSuccessful: true, receipt: receipt};
 			}
@@ -289,7 +308,7 @@ export const useLifiSolver = (
 			console.error(error);
 			return {isSuccessful: false};
 		}
-	}, [inputAsset.token, latestQuote, outputTokenAddress, outputTokenChainId, provider]);
+	}, [addNotification, inputAsset.token, latestQuote, outputTokenAddress, provider]);
 
 	const onExecuteDeposit = useCallback(
 		async (onSuccess: () => void): Promise<void> => {
