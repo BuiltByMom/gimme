@@ -77,7 +77,7 @@ export function Portfolio(): ReactNode {
 	const [balances, set_balances] = useState<TDict<TNormalizedBN>>({});
 	const {data: blockNumber} = useBlockNumber({watch: true});
 	const [isWithdrawOpen, set_isWithdrawOpen] = useState(false);
-	const [selectedChainId, set_selectedChainId] = useState(-1);
+	const [selectedChainID, set_selectedChainID] = useState(-1);
 
 	const {getPrices, pricingHash} = usePrices();
 	const allPrices = useMemo(() => {
@@ -93,10 +93,10 @@ export function Portfolio(): ReactNode {
 	const {sortedVaults, sortBy, sortDirection, onChangeSort} = useSortedVaults(userVaultsArray, balances, allPrices);
 
 	const filteredByChain = sortedVaults.filter(vault => {
-		if (selectedChainId === -1) {
+		if (selectedChainID === -1) {
 			return sortedVaults;
 		}
-		return vault.chainID === selectedChainId;
+		return vault.chainID === selectedChainID;
 	});
 	const isEmpty = filteredByChain.length === 0;
 
@@ -227,8 +227,8 @@ export function Portfolio(): ReactNode {
 					</p>
 				</div>
 				<NetworkSelector
-					selectedChainId={selectedChainId}
-					onNetworkChange={set_selectedChainId}
+					selectedChainId={selectedChainID}
+					onNetworkChange={set_selectedChainID}
 				/>
 			</div>
 

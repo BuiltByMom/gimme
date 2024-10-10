@@ -15,7 +15,7 @@ export function NetworkSelector(props: {
 	selectedChainId: number;
 	isDisabled?: boolean;
 	onPopoverOpenChange?: (value: boolean) => void;
-	onNetworkChange: (chainId: number) => void;
+	onNetworkChange: (chainID: number) => void;
 }): ReactElement {
 	const isDisabled = props.isDisabled || false;
 	const networks = props.networks || supportedNetworks;

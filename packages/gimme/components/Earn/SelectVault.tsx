@@ -176,7 +176,7 @@ export function SelectVault({
 	const [vaultInfo, set_vaultInfo] = useState<TVaultInfoModal>(undefined);
 	const [filter, set_filter] = useState<'all' | 'token'>('all');
 	const [sortDirection, set_sortDirection] = useState<TSortDirection>('');
-	const [selectedChainId, set_selectedChainId] = useState(-1);
+	const [selectedChainID, set_selectedChainID] = useState(-1);
 
 	const assetPrice = configuration.asset.token
 		? getPrice({
@@ -210,10 +210,10 @@ export function SelectVault({
 	}, [filteredVaults, sortDirection]);
 
 	const filteredByChain = sortedVaults.filter(vault => {
-		if (selectedChainId === -1) {
+		if (selectedChainID === -1) {
 			return sortedVaults;
 		}
-		return vault.chainID === selectedChainId;
+		return vault.chainID === selectedChainID;
 	});
 	const isEmpty = filteredByChain.length === 0;
 
@@ -309,8 +309,8 @@ export function SelectVault({
 															)}
 													</div>
 													<NetworkSelector
-														selectedChainId={selectedChainId}
-														onNetworkChange={set_selectedChainId}
+														selectedChainId={selectedChainID}
+														onNetworkChange={set_selectedChainID}
 													/>
 												</div>
 												<div

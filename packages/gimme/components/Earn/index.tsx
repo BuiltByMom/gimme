@@ -18,6 +18,7 @@ import {useIsBridgeNeeded} from '@lib/hooks/helpers/useIsBridgeNeeded';
 import {useIsZapNeeded} from '@lib/hooks/helpers/useIsZapNeeded';
 import {useCurrentChain} from '@lib/hooks/useCurrentChain';
 import {IconArrow} from '@lib/icons/IconArrow';
+import {secondToTime} from '@lib/utils/helpers';
 import {supportedNetworks} from '@lib/utils/tools.chains';
 import {createUniqueID} from '@lib/utils/tools.identifiers';
 
@@ -75,12 +76,12 @@ function ZapsBadge(): ReactElement {
 		toBigInt((quote as any)?.minOutputAmount || 0),
 		(quote as any)?.outputTokenDecimals || 18
 	).normalized;
-	
+
 	const pps = toNormalizedBN(
 		toBigInt(configuration.opportunity?.pricePerShare || 0),
 		configuration.opportunity?.token.decimals || 18
 	).normalized;
-	
+
 	return (
 		<div className={'flex w-full justify-between gap-4'}>
 			<p className={'max-w-[357px]'}>
@@ -103,19 +104,6 @@ function BridgeBadge(): ReactElement {
 	const fromChainName = supportedNetworks.find(network => network.id === configuration.asset.token?.chainID)?.name;
 	const toChainName = supportedNetworks.find(network => network.id === configuration.opportunity?.chainID)?.name;
 	const lifiQuote = quote as LiFiStep;
-
-	const secondToTime = (seconds: number): string => {
-		const h = Math.floor(seconds / 3600);
-		const m = Math.floor((seconds % 3600) / 60);
-		const s = Math.floor((seconds % 3600) % 60);
-		if (h === 0 && m === 0) {
-			return `${s}s`;
-		}
-		if (h === 0) {
-			return `${m}m ${s}s`;
-		}
-		return `${h}h ${m}m ${s}s`;
-	};
 
 	return (
 		<div className={'flex w-full justify-between gap-4'}>

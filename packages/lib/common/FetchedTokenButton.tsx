@@ -12,13 +12,13 @@ import type {TAddress, TNormalizedBN, TToken} from '@builtbymom/web3/types';
 export function FetchedTokenButton(props: {
 	tokenAddress: TAddress;
 	displayInfo?: boolean;
-	chainId: number;
+	forceChainID: number;
 	onSelect?: (token: TToken) => void;
 }): ReactElement {
 	const {chainID} = useWeb3();
-	const chainIdToUse = props.chainId > 0 ? props.chainId : chainID;
-	const {data} = useBalances({tokens: [{address: props.tokenAddress, chainID: chainIdToUse}]});
-	const token = data[chainIdToUse]?.[props.tokenAddress];
+	const chainIDToUse = props.forceChainID > 0 ? props.forceChainID : chainID;
+	const {data} = useBalances({tokens: [{address: props.tokenAddress, chainID: chainIDToUse}]});
+	const token = data[chainIDToUse]?.[props.tokenAddress];
 	const {getPrice, pricingHash} = usePrices();
 	const [price, set_price] = useState<TNormalizedBN | undefined>(undefined);
 
@@ -43,7 +43,7 @@ export function FetchedTokenButton(props: {
 		return (
 			<div className={'text-grey-700 mt-20'}>
 				<p>{'Sorry! No tokens found. '}</p>
-				{props.chainId === -1 && <p>{'Try specifying the chain to search on.'}</p>}
+				{props.forceChainID === -1 && <p>{'Try specifying the chain to search on.'}</p>}
 			</div>
 		);
 	}

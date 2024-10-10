@@ -66,7 +66,7 @@ function WalletLayout(props: TWalletLayoutProps): ReactNode {
 		return (
 			<FetchedTokenButton
 				tokenAddress={props.searchTokenAddress}
-				chainId={props.chainId}
+				forceChainID={props.chainID}
 				onSelect={selected => {
 					props.onSelect?.(selected);
 					props.onOpenChange(false);
@@ -194,8 +194,8 @@ function BalancesModal(props: TBalancesCurtain): ReactElement {
 	const {address} = useWeb3();
 	const [searchValue, set_searchValue] = useState('');
 	const [filter, set_filter] = useState<'all' | 'stables' | 'other'>('all');
-	const [selectedChainId, set_selectedChainId] = useState(-1);
-	const preferableChainId = props.options?.forceDisplayChainId ?? selectedChainId;
+	const [selectedChainID, set_selectedChainID] = useState(-1);
+	const preferableChainID = props.options?.forceDisplayChainID ?? selectedChainID;
 
 	const [isPopoverOpen, set_isPopoverOpen] = useState(false);
 
@@ -314,10 +314,10 @@ function BalancesModal(props: TBalancesCurtain): ReactElement {
 	}, [filter, filteredVaultTokens, getIsStablecoin]);
 
 	const filteredByChain = filteredByCategory.filter(token => {
-		if (preferableChainId === -1) {
+		if (preferableChainID === -1) {
 			return true;
 		}
-		return token.chainID === preferableChainId;
+		return token.chainID === preferableChainID;
 	});
 
 	return (
@@ -374,9 +374,9 @@ function BalancesModal(props: TBalancesCurtain): ReactElement {
 					</div>
 
 					<NetworkSelector
-						isDisabled={!!props.options?.forceDisplayChainId}
-						selectedChainId={preferableChainId}
-						onNetworkChange={set_selectedChainId}
+						isDisabled={!!props.options?.forceDisplayChainID}
+						selectedChainId={preferableChainID}
+						onNetworkChange={set_selectedChainID}
 						onPopoverOpenChange={set_isPopoverOpen}
 					/>
 				</div>
@@ -386,7 +386,7 @@ function BalancesModal(props: TBalancesCurtain): ReactElement {
 						filteredTokens={filteredByChain}
 						selectedTokens={props.selectedTokens}
 						onSelect={props.onSelect}
-						chainId={preferableChainId}
+						chainID={preferableChainID}
 						searchTokenAddress={searchTokenAddress}
 						onOpenChange={props.onOpenChange}
 					/>

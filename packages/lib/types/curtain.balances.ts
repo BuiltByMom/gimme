@@ -14,7 +14,7 @@ export type TWalletLayoutProps = {
 	filteredTokens: TToken[];
 	selectedTokens?: TToken[];
 	searchTokenAddress?: TAddress;
-	chainId: number;
+	chainID: number;
 	onSelect?: TSelectCallback;
 	onOpenChange: (isOpen: boolean) => void;
 };
@@ -38,7 +38,7 @@ export type TBalancesCurtain = {
  ** The TBalancesCurtainOptions type is used to type the options of the BalancesCurtain component.
  *************************************************************************************************/
 export type TBalancesCurtainOptions = {
-	forceDisplayChainId?: number;
+	forceDisplayChainID?: number;
 	withTabs?: boolean;
 	shouldBypassBalanceCheck?: boolean;
 	highlightedTokens?: TToken[];
