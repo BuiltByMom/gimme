@@ -76,7 +76,7 @@ function WalletSection(): ReactElement {
 
 	const notificationDotColor = useMemo(() => {
 		if (cachedEntries.find(entry => entry.status === 'pending')) {
-			return 'bg-primary';
+			return 'bg-primary animate-pulse';
 		}
 
 		if (notificationStatus === 'error') {
