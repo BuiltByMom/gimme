@@ -7,6 +7,7 @@ import {useAsyncTrigger} from '@builtbymom/web3/hooks/useAsyncTrigger';
 import {ETH_TOKEN_ADDRESS, toAddress, zeroNormalizedBN} from '@builtbymom/web3/utils';
 import {getNetwork} from '@builtbymom/web3/utils/wagmi';
 import {useDeepCompareEffect} from '@react-hookz/web';
+import {MATIC_ADDRESS} from '@lib/utils/constants';
 import {createUniqueID} from '@lib/utils/tools.identifiers';
 
 import type {AxiosResponse} from 'axios';
@@ -140,7 +141,7 @@ export const WithPopularTokens = ({children}: {children: ReactElement}): ReactEl
 			for (const eachNetwork of Object.values(balances)) {
 				for (const token of Object.values(eachNetwork)) {
 					if (token) {
-						if (token.address === toAddress('0x0000000000000000000000000000000000001010')) {
+						if (token.address === toAddress(MATIC_ADDRESS)) {
 							continue; //ignore matic erc20
 						}
 						const balance = getBalance({address: token.address, chainID: token.chainID});
