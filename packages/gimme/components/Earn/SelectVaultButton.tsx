@@ -1,4 +1,5 @@
 import React, {useMemo, useState} from 'react';
+import Image from 'next/image';
 import {cl, formatTAmount, formatUSD, percentOf, zeroNormalizedBN} from '@builtbymom/web3/utils';
 import {ImageWithFallback} from '@lib/common/ImageWithFallback';
 import {TextTruncate} from '@lib/common/TextTruncate';
@@ -60,21 +61,35 @@ export function SelectOpportunityButton(props: {onSetOpportunity: (value: TYDaem
 									</div>
 								</div>
 								<div className={'flex gap-2'}>
-									<ImageWithFallback
-										alt={configuration.opportunity.token?.symbol || 'token'}
-										unoptimized
-										src={`${process.env.SMOL_ASSETS_URL}/token/${configuration.opportunity?.chainID}/${configuration.opportunity.token.address}/logo-128.png`}
-										altSrc={`${process.env.SMOL_ASSETS_URL}/token/${configuration.opportunity?.chainID}/${configuration.opportunity.token.address}/logo-128.png`}
-										quality={90}
-										width={32}
-										height={32}
-										className={'mt-px'}
-									/>
-									<div className={'flex flex-col gap-1'}>
-										<TextTruncate
-											value={`${configuration.opportunity.name} Vault`}
-											className={'!text-grey-800 w-full text-left !text-lg font-medium'}
+									<div className={'relative mt-px'}>
+										<ImageWithFallback
+											alt={configuration.opportunity.token?.symbol || 'token'}
+											unoptimized
+											src={`${process.env.SMOL_ASSETS_URL}/token/${configuration.opportunity?.chainID}/${configuration.opportunity.token.address}/logo-128.png`}
+											altSrc={`${process.env.SMOL_ASSETS_URL}/token/${configuration.opportunity?.chainID}/${configuration.opportunity.token.address}/logo-128.png`}
+											quality={90}
+											width={32}
+											height={32}
 										/>
+										<div
+											className={
+												'absolute bottom-3.5 left-5 flex size-4 items-center justify-center rounded-full bg-white'
+											}>
+											<Image
+												width={14}
+												height={14}
+												alt={configuration.opportunity.chainID.toString()}
+												src={`${process.env.SMOL_ASSETS_URL}/chain/${configuration.opportunity.chainID}/logo.svg`}
+											/>
+										</div>
+									</div>
+									<div className={'flex flex-col gap-1'}>
+										<span
+											className={
+												'!text-grey-800 line-clamp-1 w-full text-left !text-lg font-medium'
+											}>
+											{configuration.opportunity.name} {'Vault'}
+										</span>
 
 										<p className={'text-grey-600 text-xs'}>
 											{`+${formatUSD(earnings).replace('$ ', '$')} over 1y`}

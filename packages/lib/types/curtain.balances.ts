@@ -28,7 +28,7 @@ export type TBalancesCurtain = {
 	allTokens: TToken[];
 	selectedTokens?: TToken[];
 	underlyingTokens: TToken[];
-	options: TBalancesCurtainOptions;
+	options: TBalancesCurtainOptions | undefined;
 	onOpenChange: (isOpen: boolean) => void;
 	onSelect: TSelectCallback | undefined;
 	onRefresh: () => Promise<TChainTokens>;
@@ -38,7 +38,7 @@ export type TBalancesCurtain = {
  ** The TBalancesCurtainOptions type is used to type the options of the BalancesCurtain component.
  *************************************************************************************************/
 export type TBalancesCurtainOptions = {
-	chainID?: number;
+	forceDisplayChainID?: number;
 	withTabs?: boolean;
 	shouldBypassBalanceCheck?: boolean;
 	highlightedTokens?: TToken[];
@@ -59,7 +59,7 @@ export type TBalancesCurtainContextProps = {
  ** BalancesCurtainContextApp context component.
  *************************************************************************************************/
 export type TBalancesCurtainContextAppProps = {
-	children: ReactElement
+	children: ReactElement;
 };
 
 /**************************************************************************************************

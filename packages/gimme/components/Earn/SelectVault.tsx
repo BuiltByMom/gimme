@@ -2,6 +2,7 @@ import {Fragment, type ReactElement, useCallback, useMemo, useState} from 'react
 import {cl, formatPercent, numberSort, zeroNormalizedBN} from '@builtbymom/web3/utils';
 import {Dialog, DialogPanel, Transition, TransitionChild} from '@headlessui/react';
 import * as Popover from '@radix-ui/react-popover';
+import {NetworkSelector} from '@lib/common/NetworkSelector';
 import {useDepositSolver} from '@lib/contexts/useDepositSolver';
 import {usePrices} from '@lib/contexts/usePrices';
 import IconChevronPlain from '@lib/icons/IconChevronPlain';
@@ -175,6 +176,7 @@ export function SelectVault({
 	const [vaultInfo, set_vaultInfo] = useState<TVaultInfoModal>(undefined);
 	const [filter, set_filter] = useState<'all' | 'token'>('all');
 	const [sortDirection, set_sortDirection] = useState<TSortDirection>('');
+	const [selectedChainID, set_selectedChainID] = useState(-1);
 
 	const assetPrice = configuration.asset.token
 		? getPrice({
@@ -206,6 +208,14 @@ export function SelectVault({
 			})
 		);
 	}, [filteredVaults, sortDirection]);
+
+	const filteredByChain = sortedVaults.filter(vault => {
+		if (selectedChainID === -1) {
+			return sortedVaults;
+		}
+		return vault.chainID === selectedChainID;
+	});
+	const isEmpty = filteredByChain.length === 0;
 
 	const onChangeSort = useCallback(() => {
 		if (sortDirection === '') {
@@ -263,31 +273,8 @@ export function SelectVault({
 													'relative overflow-hidden md:rounded-3xl !bg-white transition-all',
 													'w-full p-2 h-[100vh] md:h-auto flex flex-col items-center justify-center'
 												)}>
-												<div
-													className={
-														'flex w-full items-start justify-between px-4 pb-2 pt-4'
-													}>
-													<div className={'mb-6 flex gap-2'}>
-														<button
-															className={cl(
-																'text-grey-800 border-grey-200 hover:bg-grey-200 rounded-2xl border px-6 py-1 font-medium',
-																filter === 'all' ? 'border-grey-800' : ''
-															)}
-															onClick={() => set_filter('all')}>
-															{'All'}
-														</button>
-														{configuration.asset.token &&
-															underlyingTokenFilteredVaults.length > 0 && (
-																<button
-																	className={cl(
-																		'text-grey-800 border-grey-200 hover:bg-grey-200 rounded-2xl border px-6 py-1 font-medium',
-																		filter === 'token' ? 'border-grey-800' : ''
-																	)}
-																	onClick={() => set_filter('token')}>
-																	{configuration.asset.token.symbol}
-																</button>
-															)}
-													</div>
+												<div className={'flex w-full items-start justify-between p-4'}>
+													<p className={'text-grey-900 font-bold'}>{'Select Opportunity'}</p>
 
 													<button
 														className={'group'}
@@ -298,6 +285,33 @@ export function SelectVault({
 															}
 														/>
 													</button>
+												</div>
+												<div className={'mb-6 mt-2 flex w-full justify-between gap-2 px-4'}>
+													<div className={'flex gap-2'}>
+														<button
+															className={cl(
+																'text-grey-800 border-grey-200 hover:bg-grey-200 rounded-2xl border px-6 py-2 font-medium',
+																filter === 'all' ? 'border-grey-800' : ''
+															)}
+															onClick={() => set_filter('all')}>
+															{'All'}
+														</button>
+														{configuration.asset.token &&
+															underlyingTokenFilteredVaults.length > 0 && (
+																<button
+																	className={cl(
+																		'text-grey-800 border-grey-200 hover:bg-grey-200 rounded-2xl border px-6 py-2 font-medium',
+																		filter === 'token' ? 'border-grey-800' : ''
+																	)}
+																	onClick={() => set_filter('token')}>
+																	{configuration.asset.token.symbol}
+																</button>
+															)}
+													</div>
+													<NetworkSelector
+														selectedChainId={selectedChainID}
+														onNetworkChange={set_selectedChainID}
+													/>
 												</div>
 												<div
 													className={
@@ -323,16 +337,22 @@ export function SelectVault({
 													</div>
 												</div>
 												<div className={'scrollable flex size-full flex-col gap-2 md:h-96'}>
-													{sortedVaults.map(vault => (
-														<Vault
-															key={`${vault.address}-${vault.chainID}`}
-															vault={vault}
-															assetPrice={assetPrice}
-															onSelect={onSelect}
-															onClose={onClose}
-															onChangeVaultInfo={set_vaultInfo}
-														/>
-													))}
+													{isEmpty ? (
+														<p className={'text-grey-700 mt-20'}>
+															{'Sorry! No opportunities found'}
+														</p>
+													) : (
+														filteredByChain.map(vault => (
+															<Vault
+																key={`${vault.address}-${vault.chainID}`}
+																vault={vault}
+																assetPrice={assetPrice}
+																onSelect={onSelect}
+																onClose={onClose}
+																onChangeVaultInfo={set_vaultInfo}
+															/>
+														))
+													)}
 												</div>
 											</DialogPanel>
 

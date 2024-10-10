@@ -2,25 +2,34 @@ import {createContext, useContext, useMemo, useReducer, useState} from 'react';
 import {useLocalStorage} from 'usehooks-ts';
 import {zeroNormalizedBN} from '@builtbymom/web3/utils';
 import {defaultTxStatus} from '@builtbymom/web3/utils/wagmi';
+import {useIsBridgeNeeded} from '@lib/hooks/helpers/useIsBridgeNeeded';
 import {useIsZapNeeded} from '@lib/hooks/helpers/useIsZapNeeded';
+import {useLifiSolver} from '@lib/hooks/solvers/useLifiSolver';
 import {usePortalsSolver} from '@lib/hooks/solvers/usePortalsSolver';
 import {useVanilaSolver} from '@lib/hooks/solvers/useVanilaSolver';
 import {getNewInput} from '@lib/utils/helpers';
 
 import type {ReactElement} from 'react';
+import type {TToken} from '@builtbymom/web3/types';
+import type {TPortalsEstimate} from '@lib/utils/api.portals';
+import type {LiFiStep} from '@lifi/sdk';
 import type {TDepositActions, TDepositConfiguration, TDepositSolverContext} from './useSolver.types';
 
-const defaultProps: TDepositSolverContext = {
+type TQuote = TPortalsEstimate | LiFiStep | null;
+
+type TWithrawSolver = TDepositSolverContext<TQuote>;
+
+const defaultProps: TWithrawSolver = {
 	isDisabled: false,
 	isApproved: false,
 	isFetchingAllowance: false,
 	isFetchingQuote: false,
 	isDeposited: false,
+	quote: null,
 	allowance: zeroNormalizedBN,
 	approvalStatus: defaultTxStatus,
 	withdrawStatus: defaultTxStatus,
 	depositStatus: defaultTxStatus,
-	quote: null,
 	configuration: {
 		asset: getNewInput(),
 		opportunity: undefined
@@ -35,7 +44,7 @@ const defaultProps: TDepositSolverContext = {
 	dispatchConfiguration: (): void => undefined
 };
 
-const DepositSolverContext = createContext<TDepositSolverContext>(defaultProps);
+const DepositSolverContext = createContext<TWithrawSolver>(defaultProps);
 
 const configurationReducer = (state: TDepositConfiguration, action: TDepositActions): TDepositConfiguration => {
 	switch (action.type) {
@@ -65,6 +74,7 @@ const configurationReducer = (state: TDepositConfiguration, action: TDepositActi
 export function DepositSolverContextApp({children}: {children: ReactElement}): ReactElement {
 	const [configuration, dispatch] = useReducer(configurationReducer, defaultProps.configuration);
 	const {isZapNeeded} = useIsZapNeeded(configuration.asset.token?.address, configuration.opportunity?.token.address);
+	const {isBridgeNeeded} = useIsBridgeNeeded(configuration.asset.token?.chainID, configuration.opportunity?.chainID);
 
 	const [slippage] = useLocalStorage('slippage', '1');
 	const [deadline] = useLocalStorage('deadline', '60');
@@ -82,10 +92,20 @@ export function DepositSolverContextApp({children}: {children: ReactElement}): R
 		configuration.asset,
 		configuration.opportunity?.address,
 		isZapNeeded,
+		isBridgeNeeded,
 		slippage,
 		+deadline,
 		withPermit
 	);
+
+	const lifi = useLifiSolver(
+		configuration.asset,
+		configuration.opportunity?.address,
+		configuration.opportunity?.chainID,
+		configuration.opportunity?.token as TToken | undefined,
+		isBridgeNeeded
+	);
+
 	const [isDeposited, set_isDeposited] = useState<boolean>(false);
 
 	const onResetDeposit = (): void => {
@@ -97,11 +117,14 @@ export function DepositSolverContextApp({children}: {children: ReactElement}): R
 	};
 
 	const currentSolver = useMemo(() => {
+		if (isBridgeNeeded) {
+			return lifi;
+		}
 		if (isZapNeeded) {
 			return portals;
 		}
 		return vanila;
-	}, [isZapNeeded, portals, vanila]);
+	}, [isBridgeNeeded, isZapNeeded, lifi, portals, vanila]);
 
 	return (
 		<DepositSolverContext.Provider
@@ -116,4 +139,4 @@ export function DepositSolverContextApp({children}: {children: ReactElement}): R
 		</DepositSolverContext.Provider>
 	);
 }
-export const useDepositSolver = (): TDepositSolverContext => useContext(DepositSolverContext);
+export const useDepositSolver = (): TWithrawSolver => useContext(DepositSolverContext);

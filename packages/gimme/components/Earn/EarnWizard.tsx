@@ -187,10 +187,9 @@ export function EarnWizard(): ReactElement {
 		if (!configuration.opportunity) {
 			return false;
 		}
-		{
-			if (!configuration.asset.amount || !configuration.asset.token) {
-				return false;
-			}
+
+		if (!configuration.asset.amount || !configuration.asset.token) {
+			return false;
 		}
 
 		if (configuration.asset.token.address === configuration.opportunity?.address) {

@@ -9,9 +9,14 @@ import {getNewInput} from '@lib/utils/helpers';
 
 import type {ReactElement} from 'react';
 import type {TTokenAmountInputElement} from '@lib/types/utils';
+import type {TPortalsEstimate} from '@lib/utils/api.portals';
 import type {TWithdrawActions, TWithdrawConfiguration, TWithdrawSolverContext} from './useSolver.types';
 
-const defaultProps: TWithdrawSolverContext = {
+type TQuote = TPortalsEstimate | null;
+
+type TWithrawSolver = TWithdrawSolverContext<TQuote>;
+
+const defaultProps: TWithrawSolver = {
 	isDisabled: false,
 	isApproved: false,
 	isFetchingAllowance: false,
@@ -36,7 +41,7 @@ const defaultProps: TWithdrawSolverContext = {
 	dispatchConfiguration: (): void => undefined
 };
 
-const WithdrawSolverContext = createContext<TWithdrawSolverContext>(defaultProps);
+const WithdrawSolverContext = createContext<TWithrawSolver>(defaultProps);
 
 const configurationReducer = (state: TWithdrawConfiguration, action: TWithdrawActions): TWithdrawConfiguration => {
 	switch (action.type) {
@@ -88,7 +93,7 @@ export function WithdrawSolverContextApp({children}: {children: ReactElement}): 
 		}),
 		[vaultToken]
 	);
-	const portals = usePortalsSolver(vaultInputElementLike, configuration.tokenToReceive?.address, isZapNeeded);
+	const portals = usePortalsSolver(vaultInputElementLike, configuration.tokenToReceive?.address, isZapNeeded, false);
 	const vanila = useVanilaSolver(configuration.asset, configuration.vault, isZapNeeded, 'WITHDRAW');
 
 	const onResetWithdraw = (): void => {
@@ -116,4 +121,4 @@ export function WithdrawSolverContextApp({children}: {children: ReactElement}): 
 		</WithdrawSolverContext.Provider>
 	);
 }
-export const useWithdrawSolver = (): TWithdrawSolverContext => useContext(WithdrawSolverContext);
+export const useWithdrawSolver = (): TWithrawSolver => useContext(WithdrawSolverContext);

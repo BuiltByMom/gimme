@@ -10,6 +10,7 @@ import {toAddress, toBigInt, toNormalizedBN, zeroNormalizedBN} from '@builtbymom
 import {retrieveConfig} from '@builtbymom/web3/utils/wagmi';
 import {readContracts} from '@wagmi/core';
 import {Counter} from '@lib/common/Counter';
+import {NetworkSelector} from '@lib/common/NetworkSelector';
 import {usePrices} from '@lib/contexts/usePrices';
 import {useVaults} from '@lib/contexts/useVaults';
 import {useSortedVaults} from '@lib/hooks/useSortedVaults';
@@ -75,8 +76,8 @@ export function Portfolio(): ReactNode {
 	const {address} = useWeb3();
 	const [balances, set_balances] = useState<TDict<TNormalizedBN>>({});
 	const {data: blockNumber} = useBlockNumber({watch: true});
-	const isEmpty = userVaultsArray.length === 0;
 	const [isWithdrawOpen, set_isWithdrawOpen] = useState(false);
+	const [selectedChainID, set_selectedChainID] = useState(-1);
 
 	const {getPrices, pricingHash} = usePrices();
 	const allPrices = useMemo(() => {
@@ -90,6 +91,14 @@ export function Portfolio(): ReactNode {
 	}, [pricingHash, getPrices, userVaultsArray]);
 
 	const {sortedVaults, sortBy, sortDirection, onChangeSort} = useSortedVaults(userVaultsArray, balances, allPrices);
+
+	const filteredByChain = sortedVaults.filter(vault => {
+		if (selectedChainID === -1) {
+			return sortedVaults;
+		}
+		return vault.chainID === selectedChainID;
+	});
+	const isEmpty = filteredByChain.length === 0;
 
 	/**********************************************************************************************
 	 * Function that should be triggered on every block update. This lets us display the up-to-date
@@ -181,7 +190,7 @@ export function Portfolio(): ReactNode {
 
 		return (
 			<div className={'flex max-h-[366px] flex-col gap-2 overflow-y-auto'}>
-				{sortedVaults.map(vault => (
+				{filteredByChain.map(vault => (
 					<VaultRow
 						key={vault.address}
 						vault={vault}
@@ -203,19 +212,26 @@ export function Portfolio(): ReactNode {
 			className={
 				'md:mt:0 border-grey-200 z-20 mb-12 mt-6 w-full max-w-[864px] rounded-2xl border bg-white p-8 md:mb-0'
 			}>
-			<div className={'mb-12 font-medium'}>
-				<p className={'text-grey-900 mb-2 text-xs'}>{'Your Savings'}</p>
-				<p className={'text-grey-800 text-4xl'}>
-					{'$'}
-					<Counter
-						value={totalDeposited}
-						decimals={4}
-						decimalsToDisplay={[4]}
-						decimalsClassName={'!text-grey-200'}
-						shouldBeStylized
-					/>
-				</p>
+			<div className={'mb-12 flex items-start justify-between '}>
+				<div className={'font-medium'}>
+					<p className={'text-grey-900 mb-2 text-xs'}>{'Your Savings'}</p>
+					<p className={'text-grey-800 text-4xl'}>
+						{'$'}
+						<Counter
+							value={totalDeposited}
+							decimals={4}
+							decimalsToDisplay={[4]}
+							decimalsClassName={'!text-grey-200'}
+							shouldBeStylized
+						/>
+					</p>
+				</div>
+				<NetworkSelector
+					selectedChainId={selectedChainID}
+					onNetworkChange={set_selectedChainID}
+				/>
 			</div>
+
 			<div className={'flex w-full flex-col'}>
 				<VaultsListHead
 					title={'Your Opportunities'}
