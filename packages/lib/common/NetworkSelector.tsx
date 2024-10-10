@@ -1,4 +1,4 @@
-import {type ReactElement, useMemo, useState} from 'react';
+import {type ReactElement, type ReactNode, useMemo, useState} from 'react';
 import Image from 'next/image';
 import {CommandList} from 'cmdk';
 import {cl} from '@builtbymom/web3/utils';
@@ -9,6 +9,45 @@ import {Command, CommandItem} from '@lib/primitives/Commands';
 import {supportedNetworks} from '@lib/utils/tools.chains';
 
 import type {Chain} from 'viem';
+
+function NetworkList(props: {
+	networks?: Chain[];
+	currentNetwork: Chain | undefined;
+	onNetworkChange: (chainID: number) => void;
+	onClose: () => void;
+}): ReactNode {
+	return props.networks?.map(network => (
+		<CommandItem
+			key={network.id}
+			value={network.name}
+			className={cl(
+				'relative flex justify-between cursor-pointer items-center !rounded-lg !p-2 mt-1',
+				'outline-none select-none transition-colors',
+				'text-sm text-grey-900 group',
+				'focus:bg-grey-100',
+				'hover:bg-grey-100',
+				props.currentNetwork?.id === network.id ? 'bg-grey-100 !cursor-default' : ''
+			)}
+			onSelect={selectedNetwork => {
+				if (selectedNetwork === props.currentNetwork?.name) {
+					return;
+				}
+				const chain = props.networks?.find(
+					network => network.name.toLowerCase() === selectedNetwork.toLocaleLowerCase()
+				);
+				props.onNetworkChange(chain?.id || 1);
+				props.onClose();
+			}}>
+			<p>{network.name}</p>
+			<Image
+				width={24}
+				height={24}
+				alt={network.name}
+				src={`${process.env.SMOL_ASSETS_URL}/chain/${network.id}/logo.svg`}
+			/>
+		</CommandItem>
+	));
+}
 
 export function NetworkSelector(props: {
 	networks?: Chain[];
@@ -99,38 +138,12 @@ export function NetworkSelector(props: {
 								}}>
 								<p>{'All networks'}</p>
 							</CommandItem>
-							{networks.map(network => (
-								<CommandItem
-									key={network.id}
-									value={network.name}
-									className={cl(
-										'relative flex justify-between cursor-pointer items-center !rounded-lg !p-2 mt-1',
-										'outline-none select-none transition-colors',
-										'text-sm text-grey-900 group',
-										'focus:bg-grey-100',
-										'hover:bg-grey-100',
-										currentNetwork?.id === network.id ? 'bg-grey-100 !cursor-default' : ''
-									)}
-									onSelect={selectedNetwork => {
-										if (selectedNetwork === currentNetwork?.name) {
-											return;
-										}
-										const chain = networks.find(
-											network =>
-												network.name.toLowerCase() === selectedNetwork.toLocaleLowerCase()
-										);
-										props.onNetworkChange(chain?.id || 1);
-										set_isOpen(false);
-									}}>
-									<p>{network.name}</p>
-									<Image
-										width={24}
-										height={24}
-										alt={network.name}
-										src={`${process.env.SMOL_ASSETS_URL}/chain/${network.id}/logo.svg`}
-									/>
-								</CommandItem>
-							))}
+							<NetworkList
+								networks={networks}
+								currentNetwork={currentNetwork}
+								onNetworkChange={props.onNetworkChange}
+								onClose={() => set_isOpen(false)}
+							/>
 						</CommandList>
 					</Command>
 				</Popover.Content>
