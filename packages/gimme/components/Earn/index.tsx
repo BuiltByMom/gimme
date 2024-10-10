@@ -75,10 +75,12 @@ function ZapsBadge(): ReactElement {
 		toBigInt((quote as any)?.minOutputAmount || 0),
 		(quote as any)?.outputTokenDecimals || 18
 	).normalized;
+	
 	const pps = toNormalizedBN(
 		toBigInt(configuration.opportunity?.pricePerShare || 0),
 		configuration.opportunity?.token.decimals || 18
 	).normalized;
+	
 	return (
 		<div className={'flex w-full justify-between gap-4'}>
 			<p className={'max-w-[357px]'}>
