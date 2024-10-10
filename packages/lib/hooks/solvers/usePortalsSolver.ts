@@ -99,15 +99,16 @@ export const usePortalsSolver = (
 		const isOutputStablecoin = getIsStablecoin({address: outputTokenAddress, chainID: inputAsset.token.chainID});
 
 		const {result, error} = await getQuote(request, isOutputStablecoin ? 0.1 : 0.5);
+		set_isFetchingQuote(false);
 		if (!result) {
 			if (error) {
 				console.error(error);
 			}
-			set_isFetchingQuote(false);
+			set_latestQuote(undefined);
+
 			return undefined;
 		}
 		set_latestQuote(result);
-		set_isFetchingQuote(false);
 
 		return result;
 	}, [inputAsset.token, inputAsset.normalizedBigAmount, outputTokenAddress, address, getIsStablecoin]);
