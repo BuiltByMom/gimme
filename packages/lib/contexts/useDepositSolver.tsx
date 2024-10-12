@@ -1,4 +1,5 @@
 import {createContext, useContext, useMemo, useReducer, useState} from 'react';
+import {useLocalStorage} from 'usehooks-ts';
 import {zeroNormalizedBN} from '@builtbymom/web3/utils';
 import {defaultTxStatus} from '@builtbymom/web3/utils/wagmi';
 import {useIsZapNeeded} from '@lib/hooks/helpers/useIsZapNeeded';
@@ -64,8 +65,27 @@ const configurationReducer = (state: TDepositConfiguration, action: TDepositActi
 export function DepositSolverContextApp({children}: {children: ReactElement}): ReactElement {
 	const [configuration, dispatch] = useReducer(configurationReducer, defaultProps.configuration);
 	const {isZapNeeded} = useIsZapNeeded(configuration.asset.token?.address, configuration.opportunity?.token.address);
-	const vanila = useVanilaSolver(configuration.asset, configuration.opportunity, isZapNeeded, 'DEPOSIT');
-	const portals = usePortalsSolver(configuration.asset, configuration.opportunity?.address, isZapNeeded);
+
+	const [slippage] = useLocalStorage('slippage', '1');
+	const [deadline] = useLocalStorage('deadline', '60');
+	const [withPermit] = useLocalStorage('withPermit', true);
+
+	const vanila = useVanilaSolver(
+		configuration.asset,
+		configuration.opportunity,
+		isZapNeeded,
+		'DEPOSIT',
+		+deadline,
+		withPermit
+	);
+	const portals = usePortalsSolver(
+		configuration.asset,
+		configuration.opportunity?.address,
+		isZapNeeded,
+		slippage,
+		+deadline,
+		withPermit
+	);
 	const [isDeposited, set_isDeposited] = useState<boolean>(false);
 
 	const onResetDeposit = (): void => {

@@ -207,7 +207,7 @@ export const useSortedVaults = (
 				return;
 			}
 			set_sortBy(newSortBy);
-			queryArgs.sortDirection = newSortDirection;
+			queryArgs.sortDirection = newSortDirection || '';
 			queryArgs.sortBy = newSortBy;
 			router.replace({pathname: router.pathname, query: queryArgs}, undefined, {shallow: true});
 		},

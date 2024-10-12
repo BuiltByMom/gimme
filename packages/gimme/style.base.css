@@ -167,7 +167,6 @@ select:focus {
 	}
 }
 
-
 .DropdownMenuContent {
 	width: var(--radix-dropdown-menu-trigger-width);
 	max-height: var(--radix-dropdown-menu-content-available-height);
@@ -176,6 +175,32 @@ select:focus {
 .DropdownMenuContent2 {
 	width: var(--radix-dropdown-menu-content-available-width);
 	max-height: var(--radix-dropdown-menu-content-available-height);
+}
+
+.SwitchRoot {
+	min-width: 56px;
+	height: 32px;
+	background-color: #e3f2fe;
+	border-radius: 9999px;
+	position: relative;
+}
+
+.SwitchRoot[data-state='checked'] {
+	background-color: #ffd915;
+}
+
+.SwitchThumb {
+	display: block;
+	width: 24px;
+	height: 24px;
+	background-color: white;
+	border-radius: 9999px;
+	transition: transform 100ms;
+	transform: translateX(4px);
+	will-change: transform;
+}
+.SwitchThumb[data-state='checked'] {
+	transform: translateX(28px);
 }
 
 .skeleton-lg {
