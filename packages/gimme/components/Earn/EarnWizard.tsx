@@ -1,5 +1,4 @@
 import {useCallback, useMemo, useState} from 'react';
-import {usePlausible} from 'next-plausible';
 import {isAddressEqual} from 'viem';
 import useWallet from '@builtbymom/web3/contexts/useWallet';
 import {useWeb3} from '@builtbymom/web3/contexts/useWeb3';
@@ -20,7 +19,6 @@ export function EarnWizard(): ReactElement {
 	const {configuration, onResetDeposit} = useDepositSolver();
 	const {vaults, vaultsArray} = useVaults();
 	const chain = useCurrentChain();
-	const plausible = usePlausible();
 
 	const [transactionResult, set_transactionResult] = useState<{isExecuted: boolean; message: ReactElement | null}>({
 		isExecuted: false,
