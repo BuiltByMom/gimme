@@ -7,9 +7,21 @@ import type {TTokenAmountInputElement} from '@lib/types/utils';
 
 export const defaultTokenInputLike: TTokenAmountInputElement = getNewInput();
 
-/**************************************************************************************************
- ** TODO: Add comment
- *************************************************************************************************/
+/************************************************************************************************
+ * useValidateAmountInput Hook
+ *
+ * This hook provides a function to validate token input amounts and returns the validation result.
+ * It checks for various conditions such as:
+ * - Empty input
+ * - Valid token selection
+ * - Sufficient balance
+ * - Proper input format
+ *
+ * The hook returns an object with:
+ * - validate: A function to perform the validation
+ * - result: The latest validation result
+ ************************************************************************************************/
+
 export function useValidateAmountInput(): {
 	validate: (
 		inputValue: string | undefined,

@@ -31,7 +31,9 @@ const VaultsContext = createContext<TVaultsContext>({
 
 export const VaultsContextApp = memo(function VaultsContextApp({children}: {children: ReactElement}): ReactElement {
 	const {data: gimmeVaults, isLoading: isLoadingVaults} = useSWR<TYDaemonVault[]>(
-		'https://ydaemon.yearn.fi/vaults/gimme?chainIDs=137', // Persist on displaying polygon vaults
+		// 'https://ydaemon.yearn.fi/vaults/v3',
+		'https://ydaemon.yearn.fi/vaults/gimme',
+		// Persist on displaying polygon vaults
 		baseFetcher
 	);
 
@@ -58,23 +60,29 @@ export const VaultsContextApp = memo(function VaultsContextApp({children}: {chil
 	const {balances, isLoading: isLoadingBalance, getBalance} = useWallet();
 	const {getStakingTokenBalance} = useStakingTokens(gimmeVaultsDict);
 
+	/************************************************************************************************
+	 * This useMemo hook calculates and returns the user's vaults based on their balances.
+	 * It iterates through all networks and tokens in the user's balances, checking if each token
+	 * corresponds to a vault in the gimmeVaultsDict. For each matching vault, it calculates the
+	 * total balance by summing the regular balance and staking balance (if available).
+	 * Only vaults with a positive total balance are included in the result.
+	 ************************************************************************************************/
 	const userVaults = useMemo(() => {
 		const result: TDict<TYDaemonVault> = {};
-		for (const [networkID, eachNetwork] of Object.entries(balances)) {
+		for (const eachNetwork of Object.values(balances)) {
 			for (const eachToken of Object.values(eachNetwork)) {
 				const vault = gimmeVaultsDict[toAddress(eachToken.address)];
 				if (!vault) {
 					continue;
 				}
-
 				let totalBalance = 0n;
-				const balance = getBalance({address: eachToken.address, chainID: Number(networkID)});
+				const balance = getBalance({address: eachToken.address, chainID: vault.chainID});
 				totalBalance += balance.raw;
 
 				if (vault.staking.available) {
 					const stakingBalance = getStakingTokenBalance({
 						address: vault.staking.address,
-						chainID: Number(networkID)
+						chainID: vault.chainID
 					});
 					totalBalance += stakingBalance.raw;
 				}

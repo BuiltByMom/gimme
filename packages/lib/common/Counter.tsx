@@ -27,6 +27,12 @@ export function Counter({
 	const valueRef = useRef(value || 0);
 	const [innerContent, set_innerContent] = useState<ReactElement | undefined>(undefined);
 
+	/************************************************************************************************
+	 * This useLayoutEffect hook is used to set up and manage the animation of the counter value.
+	 * It returns a cleanup function to handle any necessary teardown when the component unmounts.
+	 * The effect runs synchronously after all DOM mutations, ensuring the animation starts
+	 * immediately after the component renders, preventing any visual flicker.
+	 ************************************************************************************************/
 	useLayoutEffect((): (() => void) => {
 		const node = nodeRef.current;
 		if (node) {

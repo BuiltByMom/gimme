@@ -2,15 +2,14 @@ import type {Dispatch} from 'react';
 import type {TNormalizedBN, TToken} from '@builtbymom/web3/types';
 import type {TTxStatus} from '@builtbymom/web3/utils/wagmi';
 import type {TTokenAmountInputElement} from '@lib/types/utils';
-import type {TPortalsEstimate} from '@lib/utils/api.portals';
 import type {TYDaemonVault} from '@yearn-finance/web-lib/utils/schemas/yDaemonVaultsSchemas';
 
 /**************************************************************************************************
  * This type is a return type of every solver. It should stay the same for every new solver added
  *************************************************************************************************/
-export type TSolverContextBase = {
+export type TSolverContextBase<TQuote> = {
 	allowance: TNormalizedBN;
-	quote: TPortalsEstimate | null;
+	quote: TQuote;
 	isDisabled: boolean;
 	isApproved: boolean;
 	isFetchingAllowance: boolean;
@@ -36,10 +35,10 @@ export type TDepositActions =
 
 export type TDepositConfiguration = {
 	asset: TTokenAmountInputElement;
-	opportunity: TYDaemonVault | undefined;
+	opportunity: (TYDaemonVault & {pricePerShare?: string}) | undefined;
 };
 
-export type TDepositSolverContext = TSolverContextBase & {
+export type TDepositSolverContext<TQuote> = TSolverContextBase<TQuote> & {
 	configuration: TDepositConfiguration;
 	dispatchConfiguration: Dispatch<TDepositActions>;
 	onResetDeposit: () => void;
@@ -62,7 +61,7 @@ export type TWithdrawConfiguration = {
 	vault: TYDaemonVault | undefined;
 	tokenToReceive: TToken | undefined;
 };
-export type TWithdrawSolverContext = TSolverContextBase & {
+export type TWithdrawSolverContext<TQuote> = TSolverContextBase<TQuote> & {
 	configuration: TWithdrawConfiguration;
 	dispatchConfiguration: Dispatch<TWithdrawActions>;
 	onResetWithdraw: () => void;

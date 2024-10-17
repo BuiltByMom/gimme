@@ -1,10 +1,9 @@
 import {useCallback} from 'react';
-import {useAccount, useSwitchChain} from 'wagmi';
+import Image from 'next/image';
 import {cl, formatTAmount, formatUSD, percentOf, toAddress} from '@builtbymom/web3/utils';
 import * as Popover from '@radix-ui/react-popover';
 import {ImageWithFallback} from '@lib/common/ImageWithFallback';
 import {useDepositSolver} from '@lib/contexts/useDepositSolver';
-import {useCurrentChain} from '@lib/hooks/useCurrentChain';
 import {IconArrow} from '@lib/icons/IconArrow';
 import {IconQuestionMark} from '@lib/icons/IconQuestionMark';
 
@@ -28,30 +27,15 @@ export function Vault({
 }): ReactElement {
 	const {configuration} = useDepositSolver();
 	const {token, name, apr} = vault;
-	const {switchChainAsync} = useSwitchChain();
-
-	const {connector} = useAccount();
-	const chain = useCurrentChain();
 
 	const assetAmountUSD = assetPrice.normalized * configuration.asset.normalizedBigAmount.normalized;
 
 	const earnings = percentOf(assetAmountUSD, vault.apr.netAPR * 100);
 
-	/**********************************************************************************************
-	 * Async funciton that allows us to set selected vault with some good side effects:
-	 * 1. Chain is asynchronously switched if it doesn't coinside with chain vault is on.
-	 * 2. Form is populated with token linked to the vault and user's balance of selected token.
-	 * Exception - user has already selected native token which needs to be linked to wrapped token
-	 * vault manually.
-	 *********************************************************************************************/
 	const onSelectVault = useCallback(async () => {
-		if (vault.chainID !== chain.id) {
-			await switchChainAsync({connector, chainId: vault.chainID});
-		}
-
 		onSelect(vault);
 		onClose();
-	}, [chain.id, connector, onClose, onSelect, switchChainAsync, vault]);
+	}, [onClose, onSelect, vault]);
 
 	return (
 		<div
@@ -66,16 +50,29 @@ export function Vault({
 				'cursor-pointer'
 			)}
 			onClick={onSelectVault}>
-			<div className={'relative flex items-center gap-4'}>
-				<ImageWithFallback
-					alt={token.symbol}
-					unoptimized
-					src={`${process.env.SMOL_ASSETS_URL}/token/${vault.chainID}/${token.address}/logo-128.png`}
-					altSrc={`${process.env.SMOL_ASSETS_URL}/token/${vault.chainID}/${token.address}/logo-128.png`}
-					quality={90}
-					width={32}
-					height={32}
-				/>
+			<div className={'flex items-center gap-4'}>
+				<div className={'relative'}>
+					<ImageWithFallback
+						alt={token.symbol}
+						unoptimized
+						src={`${process.env.SMOL_ASSETS_URL}/token/${vault.chainID}/${token.address}/logo-128.png`}
+						altSrc={`${process.env.SMOL_ASSETS_URL}/token/${vault.chainID}/${token.address}/logo-128.png`}
+						quality={90}
+						width={32}
+						height={32}
+					/>
+					<div
+						className={
+							'absolute -bottom-1 left-5 flex size-4 items-center justify-center rounded-full bg-white'
+						}>
+						<Image
+							width={14}
+							height={14}
+							alt={vault.chainID.toString()}
+							src={`${process.env.SMOL_ASSETS_URL}/chain/${vault.chainID}/logo.svg`}
+						/>
+					</div>
+				</div>
 				<div className={'flex flex-col items-start gap-0.5 text-left'}>
 					<p className={'text-grey-900'}>
 						{name}

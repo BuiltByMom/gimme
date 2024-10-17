@@ -10,16 +10,21 @@ export function useStakingTokens(vaults: TDict<TYDaemonVault>): {
 	getStakingTokenBalance: (value: {address: TAddress; chainID: number}) => TNormalizedBN;
 	isLoading: boolean;
 } {
-	const vaultsWithStaking = Object.values(vaults).filter(vault => {
-		if (vault.staking.available && isAddress(vault.staking.address)) {
-			return true;
-		}
-		return false;
-	});
+	// Filter vaults that have staking available and a valid staking address
+	const vaultsWithStaking = Object.values(vaults).filter(
+		vault => vault.staking.available && isAddress(vault.staking.address)
+	);
 
-	const stakingTokens = vaultsWithStaking.map(vault => ({address: vault.staking.address, chainID: vault.chainID}));
+	// Extract staking token addresses and chain IDs from filtered vaults
+	const stakingTokens = vaultsWithStaking.map(vault => ({
+		address: vault.staking.address,
+		chainID: vault.chainID
+	}));
+
+	// Fetch balances for all staking tokens
 	const {data: balances, isLoading} = useBalances({tokens: stakingTokens});
 
+	// Function to get the balance of a specific staking token
 	const getStakingTokenBalance = useCallback(
 		({address, chainID}: {address: TAddress; chainID: number}): TNormalizedBN => {
 			if (isLoading || !balances[chainID]) {
@@ -29,5 +34,6 @@ export function useStakingTokens(vaults: TDict<TYDaemonVault>): {
 		},
 		[balances, isLoading]
 	);
+
 	return {stakingTokens, getStakingTokenBalance, isLoading};
 }

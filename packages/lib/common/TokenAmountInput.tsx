@@ -1,15 +1,15 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import Image from 'next/image';
 import {usePlausible} from 'next-plausible';
 import InputNumber from 'rc-input-number';
 import {useWeb3} from '@builtbymom/web3/contexts/useWeb3';
 import {useTokenList} from '@builtbymom/web3/contexts/WithTokenList';
 import {cl, formatAmount, formatCounterValue, percentOf, toAddress, zeroNormalizedBN} from '@builtbymom/web3/utils';
-import {useDeepCompareEffect, useUpdateEffect} from '@react-hookz/web';
+import {useDeepCompareEffect} from '@react-hookz/web';
 import {ImageWithFallback} from '@lib/common/ImageWithFallback';
 import {TextTruncate} from '@lib/common/TextTruncate';
 import {useBalancesModal} from '@lib/contexts/useBalancesModal';
 import {usePrices} from '@lib/contexts/usePrices';
-import {useCurrentChain} from '@lib/hooks/useCurrentChain';
 import {useValidateAmountInput} from '@lib/hooks/useValidateAmountInput';
 import {IconChevron} from '@lib/icons/IconChevron';
 import {handleLowAmount} from '@lib/utils/helpers';
@@ -39,7 +39,6 @@ export function TokenAmountInput({
 	const {onOpenCurtain} = useBalancesModal();
 	const {getPrice, pricingHash} = usePrices();
 	const {getToken} = useTokenList();
-	const chain = useCurrentChain();
 	const {address} = useWeb3();
 
 	const [isFocused, set_isFocused] = useState<boolean>(false);
@@ -155,17 +154,20 @@ export function TokenAmountInput({
 	};
 
 	const onSelectToken = useCallback(() => {
-		onOpenCurtain(token => {
-			validate(
-				value.amount === '0' ? '' : value.amount,
-				token,
-				token.balance.raw === 0n ? undefined : token.balance
-			);
-			plausible(PLAUSIBLE_EVENTS.SELECT_TOKEN, {
-				props: {tokenAddress: toAddress(token.address), tokenName: token.name, tokenChainId: token.chainID}
-			});
-		});
-	}, [onOpenCurtain, plausible, validate, value.amount]);
+		onOpenCurtain(
+			token => {
+				validate(
+					value.amount === '0' ? '' : value.amount,
+					token,
+					token.balance.raw === 0n ? undefined : token.balance
+				);
+				plausible(PLAUSIBLE_EVENTS.SELECT_TOKEN, {
+					props: {tokenAddress: toAddress(token.address), tokenName: token.name, tokenChainId: token.chainID}
+				});
+			},
+			{highlightedTokens: selectedToken ? [selectedToken] : []}
+		);
+	}, [onOpenCurtain, plausible, selectedToken, validate, value.amount]);
 
 	/**********************************************************************************************
 	 ** The tokenIcon memoized value contains the URL of the token icon. Based on the provided
@@ -192,13 +194,6 @@ export function TokenAmountInput({
 		}
 		onSetValue(result);
 	}, [result]);
-
-	/**********************************************************************************************
-	 ** Remove selected token on network change,
-	 *********************************************************************************************/
-	useUpdateEffect(() => {
-		validate(value.amount, undefined);
-	}, [chain.id]);
 
 	return (
 		<div className={'relative size-full rounded-lg'}>
@@ -232,16 +227,28 @@ export function TokenAmountInput({
 				<div className={'flex justify-between gap-2 md:items-start'}>
 					<div className={'flex w-full gap-2'}>
 						{selectedToken && shouldDisplayTokenLogo && (
-							<ImageWithFallback
-								className={'mt-1'}
-								alt={selectedToken?.symbol || 'token'}
-								unoptimized
-								src={tokenIcon || ''}
-								altSrc={`${process.env.SMOL_ASSETS_URL}/token/${selectedToken?.chainID}/${selectedToken?.address}/logo-128.png`}
-								quality={90}
-								width={32}
-								height={32}
-							/>
+							<div className={'relative mt-1'}>
+								<ImageWithFallback
+									alt={selectedToken?.symbol || 'token'}
+									unoptimized
+									src={tokenIcon || ''}
+									altSrc={`${process.env.SMOL_ASSETS_URL}/token/${selectedToken?.chainID}/${selectedToken?.address}/logo-128.png`}
+									quality={90}
+									width={32}
+									height={32}
+								/>
+								<div
+									className={
+										'absolute bottom-4 left-5 flex size-4 items-center justify-center rounded-full bg-white'
+									}>
+									<Image
+										width={14}
+										height={14}
+										alt={selectedToken.chainID.toString()}
+										src={`${process.env.SMOL_ASSETS_URL}/chain/${selectedToken.chainID}/logo.svg`}
+									/>
+								</div>
+							</div>
 						)}
 						<div className={'flex w-full flex-col'}>
 							<div className={'flex gap-1'}>

@@ -3,12 +3,12 @@ import Image from 'next/image';
 import Link from 'next/link';
 import {type Router, useRouter} from 'next/router';
 import {usePlausible} from 'next-plausible';
-import {polygon} from 'wagmi/chains';
 import {useWeb3} from '@builtbymom/web3/contexts/useWeb3';
 import {cl, truncateHex} from '@builtbymom/web3/utils';
 import {useAccountModal} from '@rainbow-me/rainbowkit';
 import {LinkOrDiv} from '@lib/common/LinkOrDiv';
-import {NetworkPopoverSelector} from '@lib/common/NetworkPopoverSelector';
+import {useNotifications} from '@lib/contexts/useNotifications';
+import {IconBell} from '@lib/icons/IconBell';
 import {Button} from '@lib/primitives/Button';
 import {PLAUSIBLE_EVENTS} from '@lib/utils/plausible';
 
@@ -52,6 +52,8 @@ function WalletSection(): ReactElement {
 	const {openAccountModal} = useAccountModal();
 	const {address, ens, clusters, openLoginModal} = useWeb3();
 
+	const {set_shouldOpenCurtain, cachedEntries, notificationStatus} = useNotifications();
+
 	const router = useRouter();
 	const currentPage = router.pathname;
 
@@ -72,6 +74,22 @@ function WalletSection(): ReactElement {
 		return truncateHex(address, 5);
 	}, [address, clusters, ens]);
 
+	const notificationDotColor = useMemo(() => {
+		if (cachedEntries.find(entry => entry.status === 'pending')) {
+			return 'bg-primary animate-pulse';
+		}
+
+		if (notificationStatus === 'error') {
+			return 'bg-red';
+		}
+
+		if (notificationStatus === 'success') {
+			return 'bg-green';
+		}
+
+		return '';
+	}, [cachedEntries, notificationStatus]);
+
 	if (!address) {
 		return (
 			<button
@@ -87,15 +105,21 @@ function WalletSection(): ReactElement {
 		<div
 			className={cl(
 				'flex items-center justify-center gap-3 rounded-2xl border border-white bg-white/60 py-0 pl-2 backdrop-blur-md md:border-none md:bg-transparent md:p-0',
-				'md:py-2 md:backdrop-filter-none'
+				'md:py-2 md:backdrop-filter-none pr-2'
 			)}>
-			<NetworkPopoverSelector networks={[polygon]} />
 			<button
 				onClick={(): void => {
 					openAccountModal?.();
 				}}
-				className={'text-grey-900 pr-3 font-bold transition-all hover:opacity-70 md:mr-0'}>
+				className={'text-grey-900 font-bold transition-all hover:opacity-70 md:mr-0'}>
 				{buttonLabel}
+			</button>
+			<button
+				className={'hover:bg-grey-200 relative rounded-full p-2 transition-colors'}
+				onClick={(): void => set_shouldOpenCurtain(true)}>
+				<IconBell className={'text-grey-900 size-4 font-bold transition-colors'} />
+
+				<div className={cl('absolute right-1 top-1 size-2 rounded-full', notificationDotColor)} />
 			</button>
 		</div>
 	);
@@ -149,6 +173,7 @@ export function TopBar(props: {router: Router}): ReactElement {
 						</LinkOrDiv>
 					))}
 				</div>
+
 				{/* <div className={'mx-10 w-px bg-white'} /> */}
 				<div className={'col-span-3 w-full place-content-center pl-6'}>
 					{isLandingPage ? (

@@ -7,6 +7,7 @@ import {useAsyncTrigger} from '@builtbymom/web3/hooks/useAsyncTrigger';
 import {ETH_TOKEN_ADDRESS, toAddress, zeroNormalizedBN} from '@builtbymom/web3/utils';
 import {getNetwork} from '@builtbymom/web3/utils/wagmi';
 import {useDeepCompareEffect} from '@react-hookz/web';
+import {MATIC_ADDRESS} from '@lib/utils/constants';
 import {createUniqueID} from '@lib/utils/tools.identifiers';
 
 import type {AxiosResponse} from 'axios';
@@ -127,17 +128,9 @@ export const WithPopularTokens = ({children}: {children: ReactElement}): ReactEl
 	 ** triggered when the allTokens or getBalance or isCustomToken or currentIdentifier changes.
 	 *********************************************************************************************/
 	const listTokens = useCallback(
-		(_chainID?: number): TToken[] => {
-			if (_chainID === undefined) {
-				_chainID = chainID;
-			}
-
+		(): TToken[] => {
 			const withBalance = [];
-			for (const [networkID, eachNetwork] of Object.entries(allTokens)) {
-				if (Number(networkID) !== _chainID) {
-					continue;
-				}
-
+			for (const eachNetwork of Object.values(allTokens)) {
 				for (const dest of Object.values(eachNetwork)) {
 					const balance = getBalance({address: dest.address, chainID: dest.chainID});
 					withBalance.push({...dest, balance});
@@ -145,13 +138,12 @@ export const WithPopularTokens = ({children}: {children: ReactElement}): ReactEl
 			}
 
 			//We need to do the same with balances
-			for (const [networkID, eachNetwork] of Object.entries(balances)) {
-				if (Number(networkID) !== _chainID) {
-					continue;
-				}
-
+			for (const eachNetwork of Object.values(balances)) {
 				for (const token of Object.values(eachNetwork)) {
 					if (token) {
+						if (token.address === toAddress(MATIC_ADDRESS)) {
+							continue; //ignore matic erc20
+						}
 						const balance = getBalance({address: token.address, chainID: token.chainID});
 						withBalance.push({...token, balance});
 					}
