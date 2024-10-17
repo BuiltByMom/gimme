@@ -1,5 +1,6 @@
 import {useCallback, useMemo, useRef, useState} from 'react';
 import toast from 'react-hot-toast';
+import {usePlausible} from 'next-plausible';
 import {BaseError, encodeFunctionData, erc20Abi, isHex, parseAbi} from 'viem';
 import {serialize} from 'wagmi';
 import {useWeb3} from '@builtbymom/web3/contexts/useWeb3';
@@ -21,6 +22,7 @@ import {approveERC20, defaultTxStatus, retrieveConfig, toWagmiProvider} from '@b
 import {getContractCallsQuote, getQuote} from '@lifi/sdk';
 import {readContract, sendTransaction, switchChain, waitForTransactionReceipt} from '@wagmi/core';
 import {useNotifications} from '@lib/contexts/useNotifications';
+import {PLAUSIBLE_EVENTS} from '@lib/utils/plausible';
 import {createUniqueID} from '@lib/utils/tools.identifiers';
 
 import type {TAddress, TNormalizedBN, TToken} from '@builtbymom/web3/types';
@@ -36,6 +38,7 @@ export const useLifiSolver = (
 	outputVaultAsset: TToken | undefined,
 	isBridgeNeeded: boolean
 ): TSolverContextBase<LiFiStep | null> => {
+	const plausible = usePlausible();
 	const {address, provider} = useWeb3();
 	const [approvalStatus, set_approvalStatus] = useState(defaultTxStatus);
 	const [depositStatus, set_depositStatus] = useState(defaultTxStatus);
@@ -289,8 +292,21 @@ export const useLifiSolver = (
 				gasPrice: gasPrice ? BigInt(gasPrice as string) : undefined
 			});
 
+			plausible(PLAUSIBLE_EVENTS.DEPOSIT, {
+				props: {
+					vaultAddress: toAddress(latestQuote.action.toToken.address),
+					vaultName: latestQuote.action.toToken.name,
+					vaultChainID: latestQuote.action.toChainId,
+					tokenAddress: toAddress(latestQuote.action.fromToken.address),
+					tokenName: latestQuote.action.fromToken.name,
+					isSwap: isBridgeNeeded,
+					tokenAmount: latestQuote.action.fromAmount,
+					action: `Deposit ${latestQuote.action.fromAmount} ${latestQuote.action.fromToken.symbol} -> ${latestQuote.action.toToken.name} on chain ${latestQuote.action.toChainId}`
+				}
+			});
+
 			const receipt = await waitForTransactionReceipt(retrieveConfig(), {
-				chainId: wagmiProvider.chainId,
+				chainId: chainId,
 				timeout: 15 * 60 * 1000, // Polygon can be very, VERY, slow. 15mn timeout just to be sure
 				hash
 			});
@@ -326,7 +342,7 @@ export const useLifiSolver = (
 			console.error(error);
 			return {isSuccessful: false};
 		}
-	}, [addNotification, inputAsset.token, latestQuote, outputTokenAddress, provider]);
+	}, [addNotification, inputAsset.token, isBridgeNeeded, latestQuote, outputTokenAddress, plausible, provider]);
 
 	const onExecuteDeposit = useCallback(
 		async (onSuccess: () => void): Promise<void> => {

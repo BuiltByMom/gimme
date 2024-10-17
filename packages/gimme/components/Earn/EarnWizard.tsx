@@ -11,7 +11,6 @@ import {useVaults} from '@lib/contexts/useVaults';
 import {useIsZapNeeded} from '@lib/hooks/helpers/useIsZapNeeded';
 import {useCurrentChain} from '@lib/hooks/useCurrentChain';
 import {Button} from '@lib/primitives/Button';
-import {PLAUSIBLE_EVENTS} from '@lib/utils/plausible';
 
 import type {ReactElement} from 'react';
 
@@ -140,32 +139,8 @@ export function EarnWizard(): ReactElement {
 	}, [onResetDeposit]);
 
 	const onDepositSuccess = useCallback(() => {
-		plausible(PLAUSIBLE_EVENTS.DEPOSIT, {
-			props: {
-				vaultAddress: toAddress(configuration.opportunity?.address),
-				vaultName: configuration.opportunity?.name,
-				vaultChainID: configuration.opportunity?.chainID,
-				tokenAddress: toAddress(configuration.asset.token?.address),
-				tokenName: configuration.asset.token?.name,
-				isSwap: isZapNeeded,
-				tokenAmount: configuration.asset.amount,
-				action: `Deposit ${configuration.asset.amount} ${configuration.asset.token?.symbol} -> ${configuration.opportunity?.symbol} on chain ${configuration.opportunity?.chainID}`
-			}
-		});
 		onRefreshTokens('DEPOSIT');
-	}, [
-		configuration.asset.amount,
-		configuration.asset.token?.address,
-		configuration.asset.token?.name,
-		configuration.asset.token?.symbol,
-		configuration.opportunity?.address,
-		configuration.opportunity?.chainID,
-		configuration.opportunity?.name,
-		configuration.opportunity?.symbol,
-		isZapNeeded,
-		onRefreshTokens,
-		plausible
-	]);
+	}, [onRefreshTokens]);
 
 	const onAction = useCallback(async () => {
 		if (isWalletSafe) {

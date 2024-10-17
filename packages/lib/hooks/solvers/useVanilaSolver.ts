@@ -1,5 +1,6 @@
 import {useCallback, useMemo, useState} from 'react';
 import toast from 'react-hot-toast';
+import {usePlausible} from 'next-plausible';
 import {encodeFunctionData, erc20Abi} from 'viem';
 import {useWeb3} from '@builtbymom/web3/contexts/useWeb3';
 import {useAsyncTrigger} from '@builtbymom/web3/hooks/useAsyncTrigger';
@@ -20,6 +21,7 @@ import {useNotifications} from '@lib/contexts/useNotifications';
 import {isPermitSupported, signPermit} from '@lib/hooks/usePermit';
 import {YEARN_4626_ROUTER_ABI} from '@lib/utils/abi/yearn4626Router.abi';
 import {deposit, depositViaRouter, redeemV3Shares, withdrawShares} from '@lib/utils/actions';
+import {PLAUSIBLE_EVENTS} from '@lib/utils/plausible';
 import {CHAINS} from '@lib/utils/tools.chains';
 import {getApproveTransaction, getDepositTransaction} from '@lib/utils/tools.gnosis';
 
@@ -39,6 +41,7 @@ export const useVanilaSolver = (
 	deadline: number = 60,
 	withPermit: boolean = true
 ): TSolverContextBase<null> => {
+	const plausible = usePlausible();
 	const {provider, address, chainID} = useWeb3();
 	const {sdk} = useSafeAppsSDK();
 	const [isFetchingAllowance, set_isFetchingAllowance] = useState(false);
@@ -230,6 +233,18 @@ export const useVanilaSolver = (
 				}
 
 				if (result.isSuccessful) {
+					plausible(PLAUSIBLE_EVENTS.DEPOSIT, {
+						props: {
+							vaultAddress: toAddress(vault?.address),
+							vaultName: vault?.name,
+							vaultChainID: vault?.chainID,
+							tokenAddress: toAddress(inputAsset.token.address),
+							tokenName: inputAsset.token.name,
+							isSwap: isZapNeeded,
+							tokenAmount: inputAsset.normalizedBigAmount.normalized.toString(),
+							action: `Deposit ${inputAsset.normalizedBigAmount.normalized.toString()} ${inputAsset.token.symbol} -> ${vault.token.symbol} on chain ${inputAsset.token.chainID}`
+						}
+					});
 					await addNotification({
 						from: toAddress(address),
 						fromAddress: toAddress(inputAsset.token.address),
@@ -266,14 +281,19 @@ export const useVanilaSolver = (
 		},
 		[
 			vault?.address,
+			vault?.name,
+			vault?.chainID,
 			vault?.token.symbol,
 			inputAsset.token?.address,
 			inputAsset.token?.chainID,
+			inputAsset.token?.name,
 			inputAsset.token?.symbol,
 			inputAsset.normalizedBigAmount.raw,
 			inputAsset.normalizedBigAmount.normalized,
 			permitSignature,
 			provider,
+			plausible,
+			isZapNeeded,
 			addNotification,
 			address,
 			onRetrieveAllowance
