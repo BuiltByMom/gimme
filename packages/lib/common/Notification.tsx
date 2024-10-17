@@ -222,7 +222,7 @@ export function Notification({
 						<p>{'To Chain:'}</p>
 						<p className={'font-bold'}>{toChainName}</p>
 						<p>{status === 'success' ? 'Finalized:' : 'Finalizes:'}</p>
-						<p className={'font-bold'}>{formattedDate}</p>
+						<p className={'whitespace-nowrap font-bold'}>{formattedDate}</p>
 						{explorerLink ? (
 							<>
 								<p>{'Transaction:'}</p>
