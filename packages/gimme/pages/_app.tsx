@@ -17,7 +17,7 @@ import {WithPrices} from '@lib/contexts/usePrices';
 import {VaultsContextApp} from '@lib/contexts/useVaults';
 import {IconCheck} from '@lib/icons/IconCheck';
 import {IconCircleCross} from '@lib/icons/IconCircleCross';
-import {supportedNetworks, supportedNetworksWithMainnet} from '@lib/utils/tools.chains';
+import {supportedNetworks} from '@lib/utils/tools.chains';
 
 import type {AppProps} from 'next/app';
 import type {ReactElement} from 'react';
@@ -39,7 +39,7 @@ function MyApp(props: AppProps): ReactElement {
 			/>
 			<IndexedDB>
 				<WithMom
-					supportedChains={supportedNetworksWithMainnet}
+					supportedChains={supportedNetworks}
 					tokenLists={[
 						'https://raw.githubusercontent.com/SmolDapp/tokenLists/main/lists/137.json',
 						'https://raw.githubusercontent.com/SmolDapp/tokenLists/main/lists/137/yearn-min.json',
