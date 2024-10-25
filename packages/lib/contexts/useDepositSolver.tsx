@@ -1,6 +1,5 @@
 import {createContext, useContext, useMemo, useReducer, useState} from 'react';
 import {useLocalStorage} from 'usehooks-ts';
-import {zeroNormalizedBN} from '@builtbymom/web3/utils';
 import {defaultTxStatus} from '@builtbymom/web3/utils/wagmi';
 import {useIsBridgeNeeded} from '@lib/hooks/helpers/useIsBridgeNeeded';
 import {useIsZapNeeded} from '@lib/hooks/helpers/useIsZapNeeded';
@@ -17,16 +16,15 @@ import type {TDepositActions, TDepositConfiguration, TDepositSolverContext} from
 
 type TQuote = TPortalsEstimate | LiFiStep | null;
 
-type TWithrawSolver = TDepositSolverContext<TQuote>;
+type TDepositSolver = TDepositSolverContext<TQuote>;
 
-const defaultProps: TWithrawSolver = {
-	isDisabled: false,
+const defaultProps: TDepositSolver = {
 	isApproved: false,
 	isFetchingAllowance: false,
 	isFetchingQuote: false,
 	isDeposited: false,
 	quote: null,
-	allowance: zeroNormalizedBN,
+	allowance: 0n,
 	approvalStatus: defaultTxStatus,
 	withdrawStatus: defaultTxStatus,
 	depositStatus: defaultTxStatus,
@@ -36,7 +34,7 @@ const defaultProps: TWithrawSolver = {
 	},
 	set_withdrawStatus: (): void => undefined,
 	set_depositStatus: (): void => undefined,
-	onApprove: async (): Promise<void> => undefined,
+	onApprove: async (): Promise<boolean> => false,
 	onExecuteDeposit: async (): Promise<void> => undefined,
 	onExecuteWithdraw: async (): Promise<void> => undefined,
 	onExecuteForGnosis: async (): Promise<void> => undefined,
@@ -44,7 +42,7 @@ const defaultProps: TWithrawSolver = {
 	dispatchConfiguration: (): void => undefined
 };
 
-const DepositSolverContext = createContext<TWithrawSolver>(defaultProps);
+const DepositSolverContext = createContext<TDepositSolver>(defaultProps);
 
 const configurationReducer = (state: TDepositConfiguration, action: TDepositActions): TDepositConfiguration => {
 	switch (action.type) {
@@ -139,4 +137,4 @@ export function DepositSolverContextApp({children}: {children: ReactElement}): R
 		</DepositSolverContext.Provider>
 	);
 }
-export const useDepositSolver = (): TWithrawSolver => useContext(DepositSolverContext);
+export const useDepositSolver = (): TDepositSolver => useContext(DepositSolverContext);

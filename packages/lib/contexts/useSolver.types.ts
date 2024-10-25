@@ -1,5 +1,6 @@
 import type {Dispatch} from 'react';
-import type {TNormalizedBN, TToken} from '@builtbymom/web3/types';
+import type {TransactionReceipt} from 'viem';
+import type {TToken} from '@builtbymom/web3/types';
 import type {TTxStatus} from '@builtbymom/web3/utils/wagmi';
 import type {TTokenAmountInputElement} from '@lib/types/utils';
 import type {TYDaemonVault} from '@yearn-finance/web-lib/utils/schemas/yDaemonVaultsSchemas';
@@ -8,9 +9,8 @@ import type {TYDaemonVault} from '@yearn-finance/web-lib/utils/schemas/yDaemonVa
  * This type is a return type of every solver. It should stay the same for every new solver added
  *************************************************************************************************/
 export type TSolverContextBase<TQuote> = {
-	allowance: TNormalizedBN;
+	allowance: bigint;
 	quote: TQuote;
-	isDisabled: boolean;
 	isApproved: boolean;
 	isFetchingAllowance: boolean;
 	isFetchingQuote: boolean;
@@ -19,10 +19,15 @@ export type TSolverContextBase<TQuote> = {
 	withdrawStatus: TTxStatus;
 	set_depositStatus: (value: TTxStatus) => void;
 	set_withdrawStatus: (value: TTxStatus) => void;
-	onApprove: (onSuccess?: () => void) => Promise<void>;
-	onExecuteDeposit: (onSuccess: () => void) => Promise<void>;
+	onApprove: (onSuccess?: () => void, onFailure?: () => void) => Promise<boolean>;
+	onExecuteDeposit: (
+		onSuccess: (receipt?: TransactionReceipt) => void,
+		onFailure?: (errorMessage?: string) => void
+	) => Promise<void>;
 	onExecuteWithdraw: (onSuccess: () => void) => Promise<void>;
 	onExecuteForGnosis: (onSuccess: () => void) => Promise<void>;
+	onDepositSuccessForSolver?: (receipt: TransactionReceipt) => void;
+	onDepositFailureForSolver?: (errorMessage?: string) => void;
 };
 
 /**************************************************************************************************

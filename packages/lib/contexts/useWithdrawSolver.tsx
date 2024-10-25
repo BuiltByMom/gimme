@@ -1,6 +1,6 @@
 import {createContext, useContext, useMemo, useReducer} from 'react';
 import useWallet from '@builtbymom/web3/contexts/useWallet';
-import {toAddress, zeroNormalizedBN} from '@builtbymom/web3/utils';
+import {toAddress} from '@builtbymom/web3/utils';
 import {defaultTxStatus} from '@builtbymom/web3/utils/wagmi';
 import {useIsZapNeeded} from '@lib/hooks/helpers/useIsZapNeeded';
 import {usePortalsSolver} from '@lib/hooks/solvers/usePortalsSolver';
@@ -17,11 +17,10 @@ type TQuote = TPortalsEstimate | null;
 type TWithrawSolver = TWithdrawSolverContext<TQuote>;
 
 const defaultProps: TWithrawSolver = {
-	isDisabled: false,
 	isApproved: false,
 	isFetchingAllowance: false,
 	isFetchingQuote: false,
-	allowance: zeroNormalizedBN,
+	allowance: 0n,
 	approvalStatus: defaultTxStatus,
 	withdrawStatus: defaultTxStatus,
 	depositStatus: defaultTxStatus,
@@ -33,7 +32,7 @@ const defaultProps: TWithrawSolver = {
 	},
 	set_withdrawStatus: (): void => undefined,
 	set_depositStatus: (): void => undefined,
-	onApprove: async (): Promise<void> => undefined,
+	onApprove: async (): Promise<boolean> => false,
 	onExecuteDeposit: async (): Promise<void> => undefined,
 	onExecuteWithdraw: async (): Promise<void> => undefined,
 	onExecuteForGnosis: async (): Promise<void> => undefined,

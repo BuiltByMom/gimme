@@ -12,6 +12,7 @@ import {useCurrentChain} from '@lib/hooks/useCurrentChain';
 import {Button} from '@lib/primitives/Button';
 
 import type {ReactElement} from 'react';
+import type {TransactionReceipt} from 'viem';
 
 export function EarnWizard(): ReactElement {
 	const {onRefresh, getBalance} = useWallet();
@@ -117,6 +118,8 @@ export function EarnWizard(): ReactElement {
 		depositStatus,
 		onExecuteForGnosis,
 		isFetchingQuote,
+		onDepositSuccessForSolver,
+		onDepositFailureForSolver,
 		quote
 	} = useDepositSolver();
 
@@ -136,19 +139,35 @@ export function EarnWizard(): ReactElement {
 		onResetDeposit();
 	}, [onResetDeposit]);
 
-	const onDepositSuccess = useCallback(() => {
-		onRefreshTokens('DEPOSIT');
-	}, [onRefreshTokens]);
+	const onDepositSuccess = useCallback(
+		(receipt?: TransactionReceipt) => {
+			onRefreshTokens('DEPOSIT');
+
+			if (receipt) {
+				onDepositSuccessForSolver?.(receipt);
+			}
+		},
+		[onDepositSuccessForSolver, onRefreshTokens]
+	);
 
 	const onAction = useCallback(async () => {
 		if (isWalletSafe) {
 			return onExecuteForGnosis(onDepositSuccess);
 		}
 		if (isApproved) {
-			return onExecuteDeposit(onDepositSuccess);
+			return onExecuteDeposit(onDepositSuccess, onDepositFailureForSolver);
 		}
 		return onApprove(() => onRefreshTokens('APPROVE'));
-	}, [isApproved, isWalletSafe, onApprove, onDepositSuccess, onExecuteDeposit, onExecuteForGnosis, onRefreshTokens]);
+	}, [
+		isApproved,
+		isWalletSafe,
+		onApprove,
+		onDepositFailureForSolver,
+		onDepositSuccess,
+		onExecuteDeposit,
+		onExecuteForGnosis,
+		onRefreshTokens
+	]);
 
 	const isValid = useMemo((): boolean => {
 		if (isAboveBalance) {
