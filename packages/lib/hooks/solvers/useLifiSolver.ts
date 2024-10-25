@@ -122,7 +122,7 @@ export const useLifiSolver = (
 		isFetchingAllowance: false,
 		isApproved,
 		isFetchingQuote,
-		approvalStatus: {...defaultTxStatus, pending: isApproving ? true : depositStatus.pending},
+		approvalStatus: {...defaultTxStatus, pending: isApproving ? true : defaultTxStatus.pending},
 		depositStatus,
 		withdrawStatus: depositStatus, //Deposit and withdraw are the same for Portals
 		set_depositStatus,

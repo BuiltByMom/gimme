@@ -1,24 +1,14 @@
 import {useCallback, useMemo, useState} from 'react';
 import toast from 'react-hot-toast';
 import {usePlausible} from 'next-plausible';
-import {encodeFunctionData, erc20Abi} from 'viem';
+import {encodeFunctionData} from 'viem';
 import {useWeb3} from '@builtbymom/web3/contexts/useWeb3';
-import {useAsyncTrigger} from '@builtbymom/web3/hooks/useAsyncTrigger';
-import {
-	assert,
-	isAddress,
-	isEthAddress,
-	toAddress,
-	toBigInt,
-	toNormalizedBN,
-	zeroNormalizedBN
-} from '@builtbymom/web3/utils';
-import {approveERC20, defaultTxStatus, retrieveConfig} from '@builtbymom/web3/utils/wagmi';
+import {useApprove} from '@builtbymom/web3/hooks/useApprove';
+import {assert, isAddress, toAddress, toBigInt} from '@builtbymom/web3/utils';
+import {defaultTxStatus} from '@builtbymom/web3/utils/wagmi';
 import {useSafeAppsSDK} from '@gnosis.pm/safe-apps-react-sdk';
 import {TransactionStatus} from '@gnosis.pm/safe-apps-sdk';
-import {readContract, switchChain} from '@wagmi/core';
 import {useNotifications} from '@lib/contexts/useNotifications';
-import {isPermitSupported, signPermit} from '@lib/hooks/usePermit';
 import {YEARN_4626_ROUTER_ABI} from '@lib/utils/abi/yearn4626Router.abi';
 import {deposit, depositViaRouter, redeemV3Shares, withdrawShares} from '@lib/utils/actions';
 import {PLAUSIBLE_EVENTS} from '@lib/utils/plausible';
@@ -26,10 +16,8 @@ import {CHAINS} from '@lib/utils/tools.chains';
 import {getApproveTransaction, getDepositTransaction} from '@lib/utils/tools.gnosis';
 
 import type {BaseError} from 'viem';
-import type {TNormalizedBN} from '@builtbymom/web3/types';
 import type {TTxResponse, TTxStatus} from '@builtbymom/web3/utils/wagmi';
 import type {TSolverContextBase} from '@lib/contexts/useSolver.types';
-import type {TPermitSignature} from '@lib/hooks/usePermit.types';
 import type {TTokenAmountInputElement} from '@lib/types/utils';
 import type {TYDaemonVault} from '@yearn-finance/web-lib/utils/schemas/yDaemonVaultsSchemas';
 
@@ -42,18 +30,15 @@ export const useVanilaSolver = (
 	withPermit: boolean = true
 ): TSolverContextBase<null> => {
 	const plausible = usePlausible();
-	const {provider, address, chainID} = useWeb3();
+	const {provider, address} = useWeb3();
 	const {sdk} = useSafeAppsSDK();
-	const [isFetchingAllowance, set_isFetchingAllowance] = useState(false);
-	const [approvalStatus, set_approvalStatus] = useState<TTxStatus>(defaultTxStatus);
 	const [depositStatus, set_depositStatus] = useState<TTxStatus>(defaultTxStatus);
 	const [withdrawStatus, set_withdrawStatus] = useState<TTxStatus>(defaultTxStatus);
-	const [allowance, set_allowance] = useState<TNormalizedBN>(zeroNormalizedBN);
-	const isAboveAllowance = allowance.raw >= inputAsset.normalizedBigAmount.raw;
-	const [permitSignature, set_permitSignature] = useState<TPermitSignature | undefined>(undefined);
 
 	const {addNotification} = useNotifications();
 
+	const shouldDisableFetches =
+		!inputAsset.amount || !vault?.address || !inputAsset.token || isZapNeeded || contextActions === 'WITHDRAW';
 	/**********************************************************************************************
 	 ** The isV3Vault hook is used to determine if the current vault is a V3 vault. It's very
 	 ** important to know if the vault is a V3 vault because the deposit and withdraw functions
@@ -62,131 +47,43 @@ export const useVanilaSolver = (
 	const isV3Vault = useMemo(() => vault?.version?.split('.')?.[0] === '3', [vault?.version]);
 
 	/**********************************************************************************************
-	 ** Retrieve the allowance for the token to be used by the solver. This will
-	 ** be used to determine if the user should approve the token or not.
+	 ** The isLegacyVault is used to determine if the current vault is a legacy vault.
+	 **
+	 ** @returns isLegacyVault: boolean - Whether the vault is a legacy vault or not.
 	 *********************************************************************************************/
-	const onRetrieveAllowance = useCallback(async (): Promise<TNormalizedBN> => {
-		if (contextActions === 'WITHDRAW') {
-			return zeroNormalizedBN;
-		}
-		if (!inputAsset.token || !vault?.address || !provider || isEthAddress(inputAsset.token.address)) {
-			return zeroNormalizedBN;
-		}
-
-		set_isFetchingAllowance(true);
-		const allowance = await readContract(retrieveConfig(), {
-			chainId: Number(inputAsset.token.chainID),
-			abi: erc20Abi,
-			address: toAddress(inputAsset.token.address),
-			functionName: 'allowance',
-			args: [toAddress(address), toAddress(vault.address)]
-		});
-
-		set_isFetchingAllowance(false);
-
-		return toNormalizedBN(allowance, inputAsset.token.decimals);
-	}, [contextActions, inputAsset.token, vault?.address, provider, address]);
+	const isLegacyVault = useMemo(() => vault?.kind === 'Legacy', [vault?.kind]);
 
 	/**********************************************************************************************
-	 ** SWR hook to get the expected out for a given in/out pair with a specific amount. This hook
-	 ** is called when amount/in or out changes. Calls the allowanceFetcher callback.
+	 ** The yRouter is the yearn router address for the current chain. If so, we
+	 ** can use the permit signature flow for the deposit function.
+	 **
+	 ** @returns yRouter: TAddress - The yearn router address for the current chain.
 	 *********************************************************************************************/
-	useAsyncTrigger(async (): Promise<void> => {
-		if (contextActions === 'WITHDRAW') {
-			return;
-		}
-		const shouldDisableFetches = !inputAsset.amount || !vault?.address || !inputAsset.token || isZapNeeded;
-		if (shouldDisableFetches) {
-			return;
-		}
-		set_allowance(await onRetrieveAllowance());
-	}, [contextActions, inputAsset.amount, inputAsset.token, vault?.address, isZapNeeded, onRetrieveAllowance]);
+	const yRouter = useMemo(() => toAddress(CHAINS[vault?.chainID || 0]?.yearnRouterAddress), [vault?.chainID]);
 
 	/**********************************************************************************************
-	 ** Trigger an approve web3 action, simply trying to approve `amount` tokens
-	 ** to be used by the final vault, in charge of depositing the tokens.
-	 ** This approve can not be triggered if the wallet is not active
-	 ** (not connected) or if the tx is still pending.
+	 ** The useApprove hook is used to approve the token to spend for the vault. This is used to
+	 ** allow the vault to spend the token on behalf of the user. This is required for the deposit
+	 ** function to work.
+	 **
+	 ** @returns isApproved: boolean - Whether the token is approved or not.
+	 ** @returns isApproving: boolean - Whether the approval is in progress.
+	 ** @returns onApprove: () => void - Function to approve the token.
+	 ** @returns amountApproved: bigint - The amount approved.
+	 ** @returns permitSignature: TPermitSignature - The permit signature.
+	 ** @returns onClearPermit: () => void - Function to clear the permit signature.
 	 *********************************************************************************************/
-	const onApprove = useCallback(
-		async (onSuccess?: () => void): Promise<void> => {
-			assert(inputAsset.token, 'Input token is not set');
-			assert(vault?.address, 'Output token is not set');
-
-			const hasPermitSupported = await isPermitSupported({
-				contractAddress: inputAsset.token.address,
-				chainID: inputAsset.token.chainID,
-				options: {disableExceptions: true}
-			});
-			try {
-				if (
-					hasPermitSupported &&
-					withPermit &&
-					isV3Vault &&
-					isAddress(CHAINS[inputAsset.token.chainID].yearnRouterAddress)
-				) {
-					/**************************************************************************
-					 ** We need to switch chain manually before signing the permit
-					 **************************************************************************/
-					if (chainID !== inputAsset.token.chainID) {
-						await switchChain(retrieveConfig(), {chainId: inputAsset.token.chainID});
-					}
-					const signResult = await signPermit({
-						contractAddress: inputAsset.token.address,
-						ownerAddress: toAddress(address),
-						spenderAddress: toAddress(CHAINS[inputAsset.token.chainID].yearnRouterAddress),
-						value: inputAsset.normalizedBigAmount?.raw || 0n,
-						deadline: BigInt(Math.floor(Date.now() / 1000) + 60 * deadline),
-						chainID: inputAsset.token.chainID
-					});
-					if (signResult?.signature) {
-						set_approvalStatus({...approvalStatus, success: true});
-						set_allowance(inputAsset.normalizedBigAmount || zeroNormalizedBN);
-						set_permitSignature(signResult);
-						onSuccess?.();
-					} else {
-						set_approvalStatus({...approvalStatus, error: true});
-						throw new Error('Error signing a permit for a given token using the specified parameters.');
-					}
-				} else {
-					const result = await approveERC20({
-						connector: provider,
-						chainID: inputAsset.token.chainID,
-						contractAddress: inputAsset.token.address,
-						spenderAddress: vault.address,
-						amount: inputAsset.normalizedBigAmount?.raw || 0n,
-						statusHandler: set_approvalStatus
-					});
-					set_allowance(await onRetrieveAllowance());
-					if (result.isSuccessful) {
-						onSuccess?.();
-					}
-				}
-			} catch (error) {
-				if (permitSignature) {
-					set_permitSignature(undefined);
-					set_allowance(zeroNormalizedBN);
-				}
-				set_approvalStatus({...defaultTxStatus, error: true});
-
-				toast.error((error as BaseError)?.message || 'An error occured while creating your transaction!');
-			}
-		},
-		[
-			inputAsset.token,
-			inputAsset.normalizedBigAmount,
-			vault?.address,
-			withPermit,
-			isV3Vault,
-			chainID,
-			address,
-			deadline,
-			approvalStatus,
-			provider,
-			onRetrieveAllowance,
-			permitSignature
-		]
-	);
+	const {isApproved, isApproving, onApprove, amountApproved, permitSignature, onClearPermit} = useApprove({
+		provider,
+		chainID: inputAsset?.token?.chainID || 0,
+		tokenToApprove: toAddress(inputAsset.token?.address),
+		spender: isV3Vault && isAddress(yRouter) ? yRouter : toAddress(vault?.address),
+		owner: toAddress(address),
+		amountToApprove: toBigInt(inputAsset.normalizedBigAmount?.raw || 0n),
+		shouldUsePermit: isV3Vault && isAddress(yRouter) && !isLegacyVault && withPermit,
+		deadline,
+		disabled: shouldDisableFetches
+	});
 
 	/**********************************************************************************************
 	 ** Trigger a deposit web3 action, simply trying to deposit `amount` tokens to
@@ -263,7 +160,6 @@ export const useVanilaSolver = (
 					});
 
 					onSuccess();
-					onRetrieveAllowance();
 					set_depositStatus({...defaultTxStatus, success: true});
 
 					return;
@@ -274,8 +170,7 @@ export const useVanilaSolver = (
 				console.error(error);
 			} finally {
 				if (permitSignature) {
-					set_permitSignature(undefined);
-					set_allowance(zeroNormalizedBN);
+					onClearPermit();
 				}
 			}
 		},
@@ -283,11 +178,11 @@ export const useVanilaSolver = (
 			vault?.address,
 			vault?.name,
 			vault?.chainID,
-			vault?.token.symbol,
-			inputAsset.token?.address,
-			inputAsset.token?.chainID,
-			inputAsset.token?.name,
-			inputAsset.token?.symbol,
+			vault?.token?.symbol,
+			inputAsset?.token?.address,
+			inputAsset?.token?.chainID,
+			inputAsset?.token?.name,
+			inputAsset?.token?.symbol,
 			inputAsset.normalizedBigAmount.raw,
 			inputAsset.normalizedBigAmount.normalized,
 			permitSignature,
@@ -296,7 +191,7 @@ export const useVanilaSolver = (
 			isZapNeeded,
 			addNotification,
 			address,
-			onRetrieveAllowance
+			onClearPermit
 		]
 	);
 
@@ -386,29 +281,28 @@ export const useVanilaSolver = (
 				toast.error((error as BaseError)?.message || 'An error occured while creating your transaction!');
 			} finally {
 				if (permitSignature) {
-					set_permitSignature(undefined);
-					set_allowance(zeroNormalizedBN);
+					onClearPermit();
 				}
 			}
 		},
 		[
-			address,
 			inputAsset.normalizedBigAmount?.raw,
 			inputAsset.token?.address,
 			vault?.address,
+			address,
+			sdk.txs,
 			permitSignature,
-			sdk.txs
+			onClearPermit
 		]
 	);
 
 	return {
 		quote: null,
-		allowance,
-		isFetchingAllowance,
-		isApproved: isAboveAllowance,
-		isDisabled: !approvalStatus.none,
+		allowance: amountApproved,
+		isFetchingAllowance: false,
+		isApproved,
 		isFetchingQuote: false,
-		approvalStatus,
+		approvalStatus: {...defaultTxStatus, pending: isApproving ? true : defaultTxStatus.pending},
 		depositStatus,
 		withdrawStatus,
 		set_depositStatus,
