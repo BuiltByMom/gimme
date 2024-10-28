@@ -1,6 +1,5 @@
 import {createContext, useContext, useMemo, useReducer, useState} from 'react';
 import {useLocalStorage} from 'usehooks-ts';
-import {defaultTxStatus} from '@builtbymom/web3/utils/wagmi';
 import {useIsBridgeNeeded} from '@lib/hooks/helpers/useIsBridgeNeeded';
 import {useIsZapNeeded} from '@lib/hooks/helpers/useIsZapNeeded';
 import {useLifiSolver} from '@lib/hooks/solvers/useLifiSolver';
@@ -19,25 +18,21 @@ type TQuote = TPortalsEstimate | LiFiStep | null;
 type TDepositSolver = TDepositSolverContext<TQuote>;
 
 const defaultProps: TDepositSolver = {
+	isDeposited: false,
 	isApproved: false,
 	isFetchingAllowance: false,
 	isFetchingQuote: false,
-	isDeposited: false,
+	isDepositing: false,
+	isApproving: false,
 	quote: null,
 	allowance: 0n,
-	approvalStatus: defaultTxStatus,
-	withdrawStatus: defaultTxStatus,
-	depositStatus: defaultTxStatus,
 	configuration: {
 		asset: getNewInput(),
 		opportunity: undefined
 	},
-	set_withdrawStatus: (): void => undefined,
-	set_depositStatus: (): void => undefined,
 	onApprove: async (): Promise<boolean> => false,
-	onExecuteDeposit: async (): Promise<void> => undefined,
-	onExecuteWithdraw: async (): Promise<void> => undefined,
-	onExecuteForGnosis: async (): Promise<void> => undefined,
+	onExecuteDeposit: async (): Promise<boolean> => false,
+	onExecuteWithdraw: async (): Promise<boolean> => false,
 	onResetDeposit: (): void => undefined,
 	dispatchConfiguration: (): void => undefined
 };

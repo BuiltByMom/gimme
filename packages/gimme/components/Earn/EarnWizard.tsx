@@ -113,11 +113,10 @@ export function EarnWizard(): ReactElement {
 		onApprove,
 		isApproved,
 		isFetchingAllowance,
-		approvalStatus,
 		onExecuteDeposit,
-		depositStatus,
-		onExecuteForGnosis,
 		isFetchingQuote,
+		isDepositing,
+		isApproving,
 		onDepositSuccessForSolver,
 		onDepositFailureForSolver,
 		quote
@@ -142,7 +141,7 @@ export function EarnWizard(): ReactElement {
 	const onDepositSuccess = useCallback(
 		(receipt?: TransactionReceipt) => {
 			onRefreshTokens('DEPOSIT');
-
+			console.log(receipt);
 			if (receipt) {
 				onDepositSuccessForSolver?.(receipt);
 			}
@@ -151,23 +150,11 @@ export function EarnWizard(): ReactElement {
 	);
 
 	const onAction = useCallback(async () => {
-		if (isWalletSafe) {
-			return onExecuteForGnosis(onDepositSuccess);
-		}
 		if (isApproved) {
 			return onExecuteDeposit(onDepositSuccess, onDepositFailureForSolver);
 		}
 		return onApprove(() => onRefreshTokens('APPROVE'));
-	}, [
-		isApproved,
-		isWalletSafe,
-		onApprove,
-		onDepositFailureForSolver,
-		onDepositSuccess,
-		onExecuteDeposit,
-		onExecuteForGnosis,
-		onRefreshTokens
-	]);
+	}, [isApproved, onApprove, onDepositFailureForSolver, onDepositSuccess, onExecuteDeposit, onRefreshTokens]);
 
 	const isValid = useMemo((): boolean => {
 		if (isAboveBalance) {
@@ -214,7 +201,7 @@ export function EarnWizard(): ReactElement {
 		return 'Approve';
 	};
 
-	const isBusy = depositStatus.pending || approvalStatus.pending || isFetchingAllowance || isFetchingQuote;
+	const isBusy = isDepositing || isApproving || isFetchingAllowance || isFetchingQuote;
 
 	return (
 		<div className={'col-span-12'}>

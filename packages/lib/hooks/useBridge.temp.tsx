@@ -3,13 +3,7 @@ import {BaseError, encodeFunctionData, erc20Abi, isHex, parseAbi} from 'viem';
 import {serialize} from 'wagmi';
 import {useWeb3} from '@builtbymom/web3/contexts/useWeb3';
 import {assert, isEthAddress, toAddress, toBigInt, ZERO_ADDRESS} from '@builtbymom/web3/utils';
-import {
-	defaultTxStatus,
-	retrieveConfig,
-	toWagmiProvider,
-	type TTxResponse,
-	type TTxStatus
-} from '@builtbymom/web3/utils/wagmi';
+import {retrieveConfig, toWagmiProvider, type TTxResponse} from '@builtbymom/web3/utils/wagmi';
 import {getContractCallsQuote, getQuote} from '@lifi/sdk';
 import {sendTransaction, switchChain, waitForTransactionReceipt} from '@wagmi/core';
 import {createUniqueID} from '@lib/utils/tools.identifiers';
@@ -25,11 +19,10 @@ export const useBridge = (
 	outputTokenChainId: number | undefined,
 	outputVaultAsset: TToken | undefined
 ): {
-	onExecuteDeposit: (onSuccess: () => void, onFailure?: (errorMessage?: string) => void) => Promise<void>;
+	onExecuteDeposit: (onSuccess: () => void, onFailure?: (errorMessage?: string) => void) => Promise<boolean>;
 	onRetrieveQuote: () => Promise<void>;
 	isFetchingQuote: boolean;
-	depositStatus: TTxStatus;
-	set_depositStatus: (status: TTxStatus) => void;
+	isDepositing: boolean;
 	latestQuote: LiFiStep | undefined;
 } => {
 	const uniqueIdentifier = useRef<string | undefined>(undefined);
@@ -39,7 +32,7 @@ export const useBridge = (
 	const [isFetchingQuote, set_isFetchingQuote] = useState(false);
 	const [latestQuote, set_latestQuote] = useState<LiFiStep>();
 
-	const [depositStatus, set_depositStatus] = useState(defaultTxStatus);
+	const [isDepositing, set_isDepositing] = useState(false);
 
 	/**********************************************************************************************
 	 ** This useCallback hook is used to retrieve a quote from the LiFi API.
@@ -163,8 +156,6 @@ export const useBridge = (
 		assert(inputAsset.token, 'Input token is not set');
 		assert(outputTokenAddress, 'Output token is not set');
 		try {
-			set_depositStatus({...defaultTxStatus, pending: true});
-
 			const {value, to, data, gasLimit, gasPrice, chainId} = latestQuote?.transactionRequest || {};
 			const wagmiProvider = await toWagmiProvider(provider);
 			assert(isHex(data), 'Data is not hex');
@@ -212,24 +203,23 @@ export const useBridge = (
 		async (
 			onSuccess: (receipt: TransactionReceipt) => void,
 			onFailure?: (errorMessage?: string) => void
-		): Promise<void> => {
+		): Promise<boolean> => {
 			assert(provider, 'Provider is not set');
-
-			set_depositStatus({...defaultTxStatus, pending: true});
+			set_isDepositing(true);
 			const status = await execute();
+			set_isDepositing(false);
 			if (status.isSuccessful && status.receipt) {
-				set_depositStatus({...defaultTxStatus, success: true});
 				onSuccess(status.receipt);
-			} else {
-				set_depositStatus({...defaultTxStatus, error: true});
-				const errorMessage =
-					(status.error as BaseError).message ||
-					(status.error as BaseError).shortMessage ||
-					(status.error as BaseError).details;
-				onFailure?.(errorMessage);
+				return true;
 			}
+			const errorMessage =
+				(status.error as BaseError).message ||
+				(status.error as BaseError).shortMessage ||
+				(status.error as BaseError).details;
+			onFailure?.(errorMessage);
+			return false;
 		},
 		[execute, provider]
 	);
-	return {onExecuteDeposit, onRetrieveQuote, isFetchingQuote, depositStatus, set_depositStatus, latestQuote};
+	return {onExecuteDeposit, onRetrieveQuote, isFetchingQuote, isDepositing, latestQuote};
 };

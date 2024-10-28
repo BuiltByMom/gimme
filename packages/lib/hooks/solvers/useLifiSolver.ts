@@ -5,7 +5,6 @@ import {useWeb3} from '@builtbymom/web3/contexts/useWeb3';
 import {useApprove} from '@builtbymom/web3/hooks/useApprove';
 import {useAsyncTrigger} from '@builtbymom/web3/hooks/useAsyncTrigger';
 import {ETH_TOKEN_ADDRESS, formatTAmount, isZeroAddress, toAddress, toBigInt} from '@builtbymom/web3/utils';
-import {defaultTxStatus} from '@builtbymom/web3/utils/wagmi';
 import {useNotifications} from '@lib/contexts/useNotifications';
 import {PLAUSIBLE_EVENTS} from '@lib/utils/plausible';
 
@@ -31,8 +30,12 @@ export const useLifiSolver = (
 
 	const {addNotification} = useNotifications();
 
-	const {onExecuteDeposit, onRetrieveQuote, isFetchingQuote, depositStatus, set_depositStatus, latestQuote} =
-		useBridge(inputAsset, outputTokenAddress, outputTokenChainId, outputVaultAsset);
+	const {onExecuteDeposit, onRetrieveQuote, isFetchingQuote, latestQuote, isDepositing} = useBridge(
+		inputAsset,
+		outputTokenAddress,
+		outputTokenChainId,
+		outputVaultAsset
+	);
 
 	/**********************************************************************************************
 	 ** It's important not to make extra fetches. For this solver we should disable quote and
@@ -118,18 +121,14 @@ export const useLifiSolver = (
 	return {
 		quote: latestQuote || null,
 		allowance: amountApproved,
+		isApproving,
+		isDepositing,
 		//todo: add to lib
 		isFetchingAllowance: false,
 		isApproved,
 		isFetchingQuote,
-		approvalStatus: {...defaultTxStatus, pending: isApproving ? true : defaultTxStatus.pending},
-		depositStatus,
-		withdrawStatus: depositStatus, //Deposit and withdraw are the same for Portals
-		set_depositStatus,
-		set_withdrawStatus: set_depositStatus, //Deposit and withdraw are the same for Portals
 		onExecuteDeposit,
-		onExecuteWithdraw: onExecuteDeposit, //Deposit and withdraw are the same for Portals
-		onExecuteForGnosis: async (): Promise<void> => undefined, // TODO: add
+		onExecuteWithdraw: onExecuteDeposit,
 		onDepositSuccessForSolver,
 		onDepositFailureForSolver,
 		onApprove

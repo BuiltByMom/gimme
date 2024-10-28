@@ -50,13 +50,14 @@ export const usePortalsSolver = (
 	const {getToken} = useWallet();
 	const {data: blockNumber} = useBlockNumber();
 
-	const [depositStatus, set_depositStatus] = useState(defaultTxStatus);
 	const [latestQuote, set_latestQuote] = useState<TPortalsEstimate>();
 	const [approveCtx, set_approveCtx] = useState<TPortalsApproval>();
 
 	const [isFetchingQuote, set_isFetchingQuote] = useState(false);
 
 	const {getIsStablecoin} = useGetIsStablecoin();
+
+	const [depositStatus, set_depositStatus] = useState(defaultTxStatus);
 
 	/**********************************************************************************************
 	 ** It's important not to make extra fetches. For this solver we should disable quote and
@@ -191,7 +192,6 @@ export const usePortalsSolver = (
 		}
 
 		onRetrieveQuote();
-
 		set_depositStatus(defaultTxStatus);
 	}, [onRetrieveQuote, shouldDisableFetches]);
 
@@ -325,29 +325,8 @@ export const usePortalsSolver = (
 		onClearPermit
 	]);
 
-	/**********************************************************************************************
-	 * This execute function is not an actual deposit/withdraw, but a swap using the Portals
-	 * solver. The deposit will be executed by the Portals solver by simply swapping the input token
-	 * for the output token.
-	 *********************************************************************************************/
-	const onExecuteDeposit = useCallback(
-		async (onSuccess: () => void): Promise<void> => {
-			assert(provider, 'Provider is not set');
-
-			set_depositStatus({...defaultTxStatus, pending: true});
-			const status = await execute();
-			if (status.isSuccessful) {
-				set_depositStatus({...defaultTxStatus, success: true});
-				onSuccess();
-			} else {
-				set_depositStatus({...defaultTxStatus, error: true});
-			}
-		},
-		[execute, provider]
-	);
-
 	const onExecuteForGnosis = useCallback(
-		async (onSuccess: () => void): Promise<void> => {
+		async (onSuccess: () => void): Promise<boolean> => {
 			assert(provider, 'Provider is not set');
 			assert(latestQuote, 'Quote is not set');
 			assert(inputAsset.token, 'Input token is not set');
@@ -375,8 +354,8 @@ export const usePortalsSolver = (
 
 			if (!transaction.result) {
 				toast.error('An error occured while fetching your transaction!');
-				set_depositStatus({...defaultTxStatus, error: true});
 
+				set_depositStatus({...defaultTxStatus, error: true});
 				throw new Error('Transaction data was not fetched from Portals!');
 			}
 
@@ -431,9 +410,11 @@ export const usePortalsSolver = (
 				set_depositStatus({...defaultTxStatus, success: true});
 
 				onSuccess?.();
+				return true;
 			} catch (error) {
 				set_depositStatus({...defaultTxStatus, error: true});
 				toast.error((error as BaseError)?.message || 'An error occured while creating your transaction!');
+				return false;
 			} finally {
 				if (permitSignature) {
 					onClearPermit();
@@ -458,6 +439,27 @@ export const usePortalsSolver = (
 		]
 	);
 
+	/**********************************************************************************************
+	 * This execute function is not an actual deposit/withdraw, but a swap using the Portals
+	 * solver. The deposit will be executed by the Portals solver by simply swapping the input token
+	 * for the output token.
+	 *********************************************************************************************/
+	const onExecuteDeposit = useCallback(
+		async (onSuccess: () => void): Promise<boolean> => {
+			assert(provider, 'Provider is not set');
+
+			if (isWalletSafe) {
+				return await onExecuteForGnosis(onSuccess);
+			}
+
+			set_depositStatus({...defaultTxStatus, pending: true});
+			const status = await execute();
+			set_depositStatus({...defaultTxStatus, success: status.isSuccessful});
+			return status.isSuccessful;
+		},
+		[execute, isWalletSafe, onExecuteForGnosis, provider]
+	);
+
 	return {
 		quote: latestQuote || null,
 		allowance: amountApproved,
@@ -465,14 +467,11 @@ export const usePortalsSolver = (
 		isFetchingAllowance: false,
 		isApproved,
 		isFetchingQuote,
-		approvalStatus: {...defaultTxStatus, pending: isApproving ? true : defaultTxStatus.pending},
-		depositStatus,
-		withdrawStatus: depositStatus, //Deposit and withdraw are the same for Portals
-		set_depositStatus,
-		set_withdrawStatus: set_depositStatus, //Deposit and withdraw are the same for Portals
+		isApproving,
+		isDepositing: depositStatus.pending,
 		onExecuteDeposit,
 		onExecuteWithdraw: onExecuteDeposit, //Deposit and withdraw are the same for Portals
-		onExecuteForGnosis,
+
 		onApprove
 	};
 };

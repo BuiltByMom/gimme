@@ -1,7 +1,6 @@
 import type {Dispatch} from 'react';
 import type {TransactionReceipt} from 'viem';
 import type {TToken} from '@builtbymom/web3/types';
-import type {TTxStatus} from '@builtbymom/web3/utils/wagmi';
 import type {TTokenAmountInputElement} from '@lib/types/utils';
 import type {TYDaemonVault} from '@yearn-finance/web-lib/utils/schemas/yDaemonVaultsSchemas';
 
@@ -14,18 +13,18 @@ export type TSolverContextBase<TQuote> = {
 	isApproved: boolean;
 	isFetchingAllowance: boolean;
 	isFetchingQuote: boolean;
-	approvalStatus: TTxStatus;
-	depositStatus: TTxStatus;
-	withdrawStatus: TTxStatus;
-	set_depositStatus: (value: TTxStatus) => void;
-	set_withdrawStatus: (value: TTxStatus) => void;
+	isApproving: boolean;
+	isDepositing: boolean;
+	isWithdrawing?: boolean;
 	onApprove: (onSuccess?: () => void, onFailure?: () => void) => Promise<boolean>;
 	onExecuteDeposit: (
 		onSuccess: (receipt?: TransactionReceipt) => void,
 		onFailure?: (errorMessage?: string) => void
-	) => Promise<void>;
-	onExecuteWithdraw: (onSuccess: () => void) => Promise<void>;
-	onExecuteForGnosis: (onSuccess: () => void) => Promise<void>;
+	) => Promise<boolean>;
+	onExecuteWithdraw: (
+		onSuccess: (receipt?: TransactionReceipt) => void,
+		onFailure?: (errorMessage?: string) => void
+	) => Promise<boolean>;
 	onDepositSuccessForSolver?: (receipt: TransactionReceipt) => void;
 	onDepositFailureForSolver?: (errorMessage?: string) => void;
 };
