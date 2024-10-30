@@ -4,11 +4,10 @@ import {usePlausible} from 'next-plausible';
 import {useWeb3} from '@builtbymom/web3/contexts/useWeb3';
 import {useApprove} from '@builtbymom/web3/hooks/useApprove';
 import {useAsyncTrigger} from '@builtbymom/web3/hooks/useAsyncTrigger';
+import {useBridge} from '@builtbymom/web3/hooks/useBridge';
 import {ETH_TOKEN_ADDRESS, formatTAmount, isZeroAddress, toAddress, toBigInt} from '@builtbymom/web3/utils';
 import {useNotifications} from '@lib/contexts/useNotifications';
 import {PLAUSIBLE_EVENTS} from '@lib/utils/plausible';
-
-import {useBridge} from '../useBridge.temp';
 
 import type {TransactionReceipt} from 'viem';
 import type {TAddress, TToken} from '@builtbymom/web3/types';
@@ -30,12 +29,12 @@ export const useLifiSolver = (
 
 	const {addNotification} = useNotifications();
 
-	const {onExecuteDeposit, onRetrieveQuote, isFetchingQuote, latestQuote, isDepositing} = useBridge(
+	const {onExecuteDeposit, onRetrieveQuote, isFetchingQuote, latestQuote, isDepositing} = useBridge({
 		inputAsset,
 		outputTokenAddress,
 		outputTokenChainId,
 		outputVaultAsset
-	);
+	});
 
 	/**********************************************************************************************
 	 ** It's important not to make extra fetches. For this solver we should disable quote and
@@ -48,7 +47,7 @@ export const useLifiSolver = (
 		return !inputAsset.token || !inputAsset.amount || !outputTokenAddress || !isBridgeNeeded || !address;
 	}, [address, inputAsset.amount, inputAsset.token, isBridgeNeeded, outputTokenAddress]);
 
-	const {isApproved, isApproving, onApprove, amountApproved} = useApprove({
+	const {isApproved, isApproving, onApprove, amountApproved, isLoading} = useApprove({
 		provider,
 		chainID: inputAsset?.token?.chainID || -1,
 		tokenToApprove: toAddress(inputAsset.token?.address),
@@ -122,8 +121,7 @@ export const useLifiSolver = (
 		allowance: amountApproved,
 		isApproving,
 		isDepositing,
-		//todo: add to lib
-		isFetchingAllowance: false,
+		isFetchingAllowance: isLoading,
 		isApproved,
 		isFetchingQuote,
 		onExecuteDeposit,

@@ -64,7 +64,7 @@ export const useVanilaSolver = (
 	 ** @returns permitSignature: TPermitSignature - The permit signature.
 	 ** @returns onClearPermit: () => void - Function to clear the permit signature.
 	 *********************************************************************************************/
-	const {isApproved, isApproving, onApprove, amountApproved, permitSignature} = useApprove({
+	const {isApproved, isApproving, onApprove, amountApproved, permitSignature, isLoading} = useApprove({
 		provider,
 		chainID: inputAsset?.token?.chainID || 0,
 		tokenToApprove: toAddress(inputAsset.token?.address),
@@ -183,7 +183,7 @@ export const useVanilaSolver = (
 	return {
 		quote: null,
 		allowance: amountApproved,
-		isFetchingAllowance: false,
+		isFetchingAllowance: isLoading,
 		isApproved,
 		isFetchingQuote: false,
 		isApproving,

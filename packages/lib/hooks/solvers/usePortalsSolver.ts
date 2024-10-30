@@ -6,6 +6,7 @@ import useWallet from '@builtbymom/web3/contexts/useWallet';
 import {useWeb3} from '@builtbymom/web3/contexts/useWeb3';
 import {useApprove} from '@builtbymom/web3/hooks/useApprove';
 import {useAsyncTrigger} from '@builtbymom/web3/hooks/useAsyncTrigger';
+import {usePortals} from '@builtbymom/web3/hooks/usePortals';
 import {
 	ETH_TOKEN_ADDRESS,
 	formatTAmount,
@@ -21,8 +22,6 @@ import {
 	type TPortalsApproval,
 	type TPortalsEstimate
 } from '@lib/utils/api.portals';
-
-import {usePortals} from '../usePortals.temp';
 
 import type {Hex, TransactionReceipt} from 'viem';
 import type {TAddress} from '@builtbymom/web3/types';
@@ -70,7 +69,7 @@ export const usePortalsSolver = (
 	 ** @returns permitSignature: TPermitSignature - The permit signature.
 	 ** @returns onClearPermit: () => void - Function to clear the permit signature.
 	 *********************************************************************************************/
-	const {isApproved, isApproving, onApprove, amountApproved, permitSignature, onClearPermit} = useApprove({
+	const {isApproved, isApproving, onApprove, amountApproved, permitSignature, isLoading, onClearPermit} = useApprove({
 		provider,
 		chainID: inputAsset.token?.chainID || 0,
 		tokenToApprove: toAddress(inputAsset.token?.address),
@@ -216,8 +215,7 @@ export const usePortalsSolver = (
 	return {
 		quote: latestQuote || null,
 		allowance: amountApproved,
-		//todo: add to lib
-		isFetchingAllowance: false,
+		isFetchingAllowance: isLoading,
 		isApproved,
 		isFetchingQuote,
 		isApproving,
