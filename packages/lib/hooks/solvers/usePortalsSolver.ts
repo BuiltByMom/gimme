@@ -1,38 +1,33 @@
 import {useCallback, useMemo, useState} from 'react';
 import toast from 'react-hot-toast';
-import {BaseError, isHex, zeroAddress} from 'viem';
+import {zeroAddress} from 'viem';
 import {useBlockNumber} from 'wagmi';
 import useWallet from '@builtbymom/web3/contexts/useWallet';
 import {useWeb3} from '@builtbymom/web3/contexts/useWeb3';
 import {useApprove} from '@builtbymom/web3/hooks/useApprove';
 import {useAsyncTrigger} from '@builtbymom/web3/hooks/useAsyncTrigger';
 import {
-	assert,
 	ETH_TOKEN_ADDRESS,
 	formatTAmount,
 	isEthAddress,
 	isZeroAddress,
 	toAddress,
-	toBigInt,
-	zeroNormalizedBN
+	toBigInt
 } from '@builtbymom/web3/utils';
-import {defaultTxStatus, retrieveConfig, toWagmiProvider} from '@builtbymom/web3/utils/wagmi';
-import {useSafeAppsSDK} from '@gnosis.pm/safe-apps-react-sdk';
-import {sendTransaction, switchChain, waitForTransactionReceipt} from '@wagmi/core';
 import {useNotifications} from '@lib/contexts/useNotifications';
-import {isValidPortalsErrorObject} from '@lib/hooks/helpers/isValidPortalsErrorObject';
-import {useGetIsStablecoin} from '@lib/hooks/helpers/useGetIsStablecoin';
-import {getPortalsApproval, getPortalsTx, getQuote, PORTALS_NETWORK} from '@lib/utils/api.portals';
-import {getApproveTransaction} from '@lib/utils/tools.gnosis';
+import {
+	getPortalsApproval,
+	PORTALS_NETWORK,
+	type TPortalsApproval,
+	type TPortalsEstimate
+} from '@lib/utils/api.portals';
 
-import type {Hex} from 'viem';
+import {usePortals} from '../usePortals.temp';
+
+import type {Hex, TransactionReceipt} from 'viem';
 import type {TAddress} from '@builtbymom/web3/types';
-import type {TTxResponse} from '@builtbymom/web3/utils/wagmi';
-import type {BaseTransaction} from '@gnosis.pm/safe-apps-sdk';
 import type {TSolverContextBase} from '@lib/contexts/useSolver.types';
-import type {TInitSolverArgs} from '@lib/types/solvers';
 import type {TTokenAmountInputElement} from '@lib/types/utils';
-import type {TPortalsApproval, TPortalsEstimate} from '@lib/utils/api.portals';
 
 export const usePortalsSolver = (
 	inputAsset: TTokenAmountInputElement,
@@ -43,21 +38,13 @@ export const usePortalsSolver = (
 	deadline: number = 60,
 	withPermit: boolean = true
 ): TSolverContextBase<TPortalsEstimate | null> => {
-	const {sdk} = useSafeAppsSDK();
-	const {address, provider, isWalletSafe} = useWeb3();
+	const {address, provider} = useWeb3();
 
 	const {addNotification} = useNotifications();
 	const {getToken} = useWallet();
 	const {data: blockNumber} = useBlockNumber();
 
-	const [latestQuote, set_latestQuote] = useState<TPortalsEstimate>();
 	const [approveCtx, set_approveCtx] = useState<TPortalsApproval>();
-
-	const [isFetchingQuote, set_isFetchingQuote] = useState(false);
-
-	const {getIsStablecoin} = useGetIsStablecoin();
-
-	const [depositStatus, set_depositStatus] = useState(defaultTxStatus);
 
 	/**********************************************************************************************
 	 ** It's important not to make extra fetches. For this solver we should disable quote and
@@ -67,7 +54,7 @@ export const usePortalsSolver = (
 	 ** 3. Zap is not needed for this configuration
 	 ** 4. Bridge is needed for this configuration
 	 *********************************************************************************************/
-	const shouldDisableFetches = useMemo(() => {
+	const isDisabled = useMemo(() => {
 		return !inputAsset.token || !inputAsset.amount || !outputTokenAddress || !isZapNeeded || isBridgeNeeded;
 	}, [inputAsset.amount, inputAsset.token, isBridgeNeeded, isZapNeeded, outputTokenAddress]);
 
@@ -92,7 +79,16 @@ export const usePortalsSolver = (
 		amountToApprove: toBigInt(inputAsset.normalizedBigAmount?.raw || 0n),
 		shouldUsePermit: !!approveCtx?.context.canPermit && withPermit,
 		deadline,
-		disabled: shouldDisableFetches
+		disabled: isDisabled
+	});
+
+	const {onExecuteDeposit, onRetrieveQuote, latestQuote, isFetchingQuote, isDepositing} = usePortals({
+		inputAsset,
+		outputTokenAddress,
+		slippage,
+		permitSignature,
+		onClearPermit,
+		disabled: isDisabled
 	});
 
 	/************************************************************************************************
@@ -111,7 +107,7 @@ export const usePortalsSolver = (
 	 * a transaction through the Portals solver.
 	 ************************************************************************************************/
 	useAsyncTrigger(async (): Promise<void> => {
-		if (shouldDisableFetches) {
+		if (isDisabled) {
 			set_approveCtx(undefined);
 			return;
 		}
@@ -144,7 +140,7 @@ export const usePortalsSolver = (
 		}
 		set_approveCtx(approval);
 	}, [
-		shouldDisableFetches,
+		isDisabled,
 		inputAsset.token,
 		inputAsset.normalizedBigAmount.raw,
 		approveCtx?.context.target,
@@ -152,326 +148,84 @@ export const usePortalsSolver = (
 		address
 	]);
 
-	const onRetrieveQuote = useCallback(async () => {
-		if (!inputAsset.token || !outputTokenAddress || inputAsset.normalizedBigAmount === zeroNormalizedBN) {
-			return;
-		}
-
-		const request: TInitSolverArgs = {
-			chainID: inputAsset.token.chainID,
-			from: toAddress(address),
-			inputToken: inputAsset.token.address,
-			outputToken: outputTokenAddress,
-			inputAmount: inputAsset.normalizedBigAmount?.raw ?? 0n,
-			isDepositing: true,
-			stakingPoolAddress: undefined
-		};
-
-		set_isFetchingQuote(true);
-
-		const isOutputStablecoin = getIsStablecoin({address: outputTokenAddress, chainID: inputAsset.token.chainID});
-
-		const {result, error} = await getQuote(request, isOutputStablecoin ? 0.1 : 0.5);
-		set_isFetchingQuote(false);
-		if (!result) {
-			if (error) {
-				console.error(error);
-			}
-			set_latestQuote(undefined);
-
-			return undefined;
-		}
-		set_latestQuote(result);
-
-		return result;
-	}, [inputAsset.token, inputAsset.normalizedBigAmount, outputTokenAddress, address, getIsStablecoin]);
-
-	useAsyncTrigger(async (): Promise<void> => {
-		if (shouldDisableFetches) {
-			return;
-		}
-
-		onRetrieveQuote();
-		set_depositStatus(defaultTxStatus);
-	}, [onRetrieveQuote, shouldDisableFetches]);
-
-	/**********************************************************************************************
-	 * execute will send the post request to execute the order and wait for it to be executed, no
-	 * matter the result. It returns a boolean value indicating whether the order was successful or
-	 * not.
-	 *********************************************************************************************/
-	const execute = useCallback(async (): Promise<TTxResponse> => {
-		assert(provider, 'Provider is not set');
-		assert(latestQuote, 'Quote is not set');
-		assert(inputAsset.token, 'Input token is not set');
-		assert(outputTokenAddress, 'Output token is not set');
-
-		try {
-			let inputToken = inputAsset.token.address;
-			const outputToken = outputTokenAddress;
-			if (isEthAddress(inputToken)) {
-				inputToken = zeroAddress;
-			}
-			const network = PORTALS_NETWORK.get(inputAsset.token.chainID);
-			const transaction = await getPortalsTx({
-				params: {
-					sender: toAddress(address),
-					inputToken: `${network}:${toAddress(inputToken)}`,
-					outputToken: `${network}:${toAddress(outputToken)}`,
-					inputAmount: toBigInt(inputAsset.normalizedBigAmount?.raw).toString(),
-					slippageTolerancePercentage: slippage,
-					validate: isWalletSafe ? 'false' : 'true',
-					permitSignature: permitSignature?.signature || undefined,
-					permitDeadline: permitSignature?.deadline ? permitSignature.deadline.toString() : undefined
-				}
-			});
-
-			if (!transaction.result) {
-				throw new Error('Transaction data was not fetched from Portals!');
+	const onDepositSuccessForSolver = useCallback(
+		(receipt: TransactionReceipt) => {
+			if (!latestQuote || !inputAsset.token || !outputTokenAddress) {
+				return;
 			}
 
-			const {
-				tx: {value, to, data, ...rest}
-			} = transaction.result;
-			const wagmiProvider = await toWagmiProvider(provider);
+			const commonNotificationParams = {
+				from: toAddress(address),
+				fromAddress: isZeroAddress(latestQuote.context.inputToken.split(':')[1])
+					? ETH_TOKEN_ADDRESS
+					: toAddress(latestQuote.context.inputToken.split(':')[1]),
+				fromChainId: inputAsset.token.chainID,
+				fromTokenName: inputAsset.token.symbol,
+				fromAmount: formatTAmount({
+					value: toBigInt(latestQuote.context.inputAmount),
+					decimals: inputAsset.token.decimals
+				}),
+				toAddress: toAddress(latestQuote.context.outputToken.split(':')[1]),
+				toChainId: inputAsset.token.chainID,
+				toTokenName: getToken({
+					chainID: inputAsset.token.chainID,
+					address: outputTokenAddress
+				}).symbol,
+				timeFinished: Date.now() / 1000
+			};
 
-			if (wagmiProvider.chainId !== inputAsset.token.chainID) {
-				try {
-					await switchChain(retrieveConfig(), {chainId: inputAsset.token.chainID});
-				} catch (error) {
-					if (!(error instanceof BaseError)) {
-						return {isSuccessful: false, error};
-					}
-					console.error(error.shortMessage);
-
-					return {isSuccessful: false, error};
-				}
-			}
-
-			assert(isHex(data), 'Data is not hex');
-			assert(wagmiProvider.walletClient, 'Wallet client is not set');
-			const hash = await sendTransaction(retrieveConfig(), {
-				value: toBigInt(value ?? 0),
-				to: toAddress(to),
-				data,
-				chainId: inputAsset.token.chainID,
-
-				...rest
-			});
-			const receipt = await waitForTransactionReceipt(retrieveConfig(), {
-				chainId: wagmiProvider.chainId,
-				timeout: 15 * 60 * 1000, // Polygon can be very, VERY, slow. 15mn timeout just to be sure
-				hash
-			});
-
-			if (receipt.status === 'success') {
-				await addNotification({
-					from: receipt.from,
-					fromAddress: isZeroAddress(latestQuote.context.inputToken.split(':')[1])
-						? ETH_TOKEN_ADDRESS
-						: toAddress(latestQuote.context.inputToken.split(':')[1]),
-					fromChainId: inputAsset.token.chainID,
-					fromTokenName: inputAsset.token.symbol,
-					fromAmount: formatTAmount({
-						value: toBigInt(latestQuote.context.inputAmount),
-						decimals: inputAsset.token.decimals
-					}),
-					toAddress: toAddress(latestQuote.context.outputToken.split(':')[1]),
-					toChainId: inputAsset.token.chainID,
-					toTokenName: getToken({
-						chainID: inputAsset.token.chainID,
-						address: outputTokenAddress
-					}).symbol,
-					timeFinished: Date.now() / 1000,
+			// A way to identify safe deposit
+			if (receipt.blockHash === '0x0') {
+				addNotification({
+					...commonNotificationParams,
+					status: 'pending',
+					type: 'portals gnosis',
+					blockNumber: blockNumber || 0n,
+					safeTxHash: receipt.transactionHash as Hex,
+					txHash: undefined
+				});
+			} else {
+				addNotification({
+					...commonNotificationParams,
 					status: 'success',
 					type: 'portals',
 					blockNumber: receipt.blockNumber,
 					safeTxHash: undefined,
 					txHash: receipt.transactionHash
 				});
-				return {isSuccessful: true, receipt: receipt};
 			}
-			console.error('Fail to perform transaction');
-			return {isSuccessful: false};
-		} catch (error) {
-			console.error(error);
-			if (isValidPortalsErrorObject(error)) {
-				const errorMessage = error.response.data.message;
-				toast.error(errorMessage);
-				console.error(errorMessage);
-			} else {
-				toast.error((error as BaseError).shortMessage || 'An error occured while creating your transaction!');
-				console.error(error);
-			}
+		},
+		[addNotification, address, blockNumber, getToken, inputAsset.token, latestQuote, outputTokenAddress]
+	);
 
-			return {isSuccessful: false};
-		} finally {
-			if (permitSignature) {
-				onClearPermit();
-			}
+	const onDepositFailureForSolver = (error?: string): void => {
+		if (!error) {
+			return;
 		}
-	}, [
-		provider,
-		latestQuote,
-		inputAsset.token,
-		inputAsset.normalizedBigAmount?.raw,
-		outputTokenAddress,
-		address,
-		slippage,
-		isWalletSafe,
-		permitSignature,
-		addNotification,
-		getToken,
-		onClearPermit
-	]);
+		toast.error(error);
+	};
 
-	const onExecuteForGnosis = useCallback(
-		async (onSuccess: () => void): Promise<boolean> => {
-			assert(provider, 'Provider is not set');
-			assert(latestQuote, 'Quote is not set');
-			assert(inputAsset.token, 'Input token is not set');
-			assert(outputTokenAddress, 'Output token is not set');
+	useAsyncTrigger(async (): Promise<void> => {
+		if (isDisabled) {
+			return;
+		}
 
-			set_depositStatus({...defaultTxStatus, pending: true});
-
-			let inputToken = inputAsset.token.address;
-			const outputToken = outputTokenAddress;
-			if (isEthAddress(inputToken)) {
-				inputToken = zeroAddress;
-			}
-
-			const network = PORTALS_NETWORK.get(inputAsset.token.chainID);
-			const transaction = await getPortalsTx({
-				params: {
-					sender: toAddress(address),
-					inputToken: `${network}:${toAddress(inputToken)}`,
-					outputToken: `${network}:${toAddress(outputToken)}`,
-					inputAmount: toBigInt(inputAsset.normalizedBigAmount?.raw).toString(),
-					slippageTolerancePercentage: slippage,
-					validate: isWalletSafe ? 'false' : 'true'
-				}
-			});
-
-			if (!transaction.result) {
-				toast.error('An error occured while fetching your transaction!');
-
-				set_depositStatus({...defaultTxStatus, error: true});
-				throw new Error('Transaction data was not fetched from Portals!');
-			}
-
-			const {
-				tx: {value, to, data}
-			} = transaction.result;
-
-			const batch = [];
-
-			if (!isZeroAddress(inputToken)) {
-				const approveTransactionForBatch = getApproveTransaction(
-					toBigInt(inputAsset.normalizedBigAmount?.raw).toString(),
-					toAddress(inputAsset.token?.address),
-					toAddress(to)
-				);
-
-				batch.push(approveTransactionForBatch);
-			}
-
-			const portalsTransactionForBatch: BaseTransaction = {
-				to: toAddress(to),
-				value: toBigInt(value ?? 0).toString(),
-				data
-			};
-			batch.push(portalsTransactionForBatch);
-
-			try {
-				const res = await sdk.txs.send({txs: batch});
-				await addNotification({
-					from: toAddress(address),
-					fromAddress: toAddress(transaction.result.context.inputToken.split(':')[1]),
-					fromChainId: inputAsset.token.chainID,
-					fromTokenName: inputAsset.token.symbol,
-					fromAmount: formatTAmount({
-						value: toBigInt(latestQuote.context.inputAmount),
-						decimals: inputAsset.token.decimals
-					}),
-					toAddress: toAddress(transaction.result.context.outputToken.split(':')[1]),
-					toChainId: inputAsset.token.chainID,
-					toTokenName: getToken({
-						chainID: inputAsset.token.chainID,
-						address: outputTokenAddress
-					}).symbol,
-					timeFinished: Date.now() / 1000,
-					status: 'pending',
-					type: 'portals gnosis',
-					blockNumber: blockNumber || 0n,
-					safeTxHash: res.safeTxHash as Hex,
-					txHash: undefined
-				});
-
-				set_depositStatus({...defaultTxStatus, success: true});
-
-				onSuccess?.();
-				return true;
-			} catch (error) {
-				set_depositStatus({...defaultTxStatus, error: true});
-				toast.error((error as BaseError)?.message || 'An error occured while creating your transaction!');
-				return false;
-			} finally {
-				if (permitSignature) {
-					onClearPermit();
-				}
-			}
-		},
-		[
-			provider,
-			latestQuote,
-			inputAsset.token,
-			inputAsset.normalizedBigAmount?.raw,
-			outputTokenAddress,
-			address,
-			slippage,
-			isWalletSafe,
-			sdk.txs,
-			addNotification,
-			getToken,
-			blockNumber,
-			permitSignature,
-			onClearPermit
-		]
-	);
-
-	/**********************************************************************************************
-	 * This execute function is not an actual deposit/withdraw, but a swap using the Portals
-	 * solver. The deposit will be executed by the Portals solver by simply swapping the input token
-	 * for the output token.
-	 *********************************************************************************************/
-	const onExecuteDeposit = useCallback(
-		async (onSuccess: () => void): Promise<boolean> => {
-			assert(provider, 'Provider is not set');
-
-			if (isWalletSafe) {
-				return await onExecuteForGnosis(onSuccess);
-			}
-
-			set_depositStatus({...defaultTxStatus, pending: true});
-			const status = await execute();
-			set_depositStatus({...defaultTxStatus, success: status.isSuccessful});
-			return status.isSuccessful;
-		},
-		[execute, isWalletSafe, onExecuteForGnosis, provider]
-	);
+		onRetrieveQuote();
+	}, [isDisabled, onRetrieveQuote]);
 
 	return {
 		quote: latestQuote || null,
 		allowance: amountApproved,
-		// todo: fix?
+		//todo: add to lib
 		isFetchingAllowance: false,
 		isApproved,
 		isFetchingQuote,
 		isApproving,
-		isDepositing: depositStatus.pending,
+		isDepositing,
 		onExecuteDeposit,
+		onDepositSuccessForSolver,
+		onDepositFailureForSolver,
 		onExecuteWithdraw: onExecuteDeposit, //Deposit and withdraw are the same for Portals
-
 		onApprove
 	};
 };

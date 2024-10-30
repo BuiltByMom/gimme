@@ -61,7 +61,6 @@ export const useLifiSolver = (
 
 	const onDepositSuccessForSolver = useCallback(
 		(receipt: TransactionReceipt) => {
-			console.log(latestQuote);
 			if (!latestQuote) {
 				return;
 			}
