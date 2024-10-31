@@ -1,4 +1,4 @@
-import {type ReactElement, useCallback} from 'react';
+import {type ReactElement, type ReactNode, useCallback} from 'react';
 import {usePlausible} from 'next-plausible';
 import {formatCounterValue, formatTAmount, toBigInt, toNormalizedValue} from '@builtbymom/web3/utils';
 import {ImageWithFallback} from '@lib/common/ImageWithFallback';
@@ -30,11 +30,17 @@ function ReceivingAmount(props: {
 		);
 	}
 
-	if (props.isFetchingQuote || !props.quote) {
+	if (props.isFetchingQuote) {
 		return (
 			<div className={'flex h-8 w-28 flex-col justify-center'}>
 				<div className={'skeleton-lg h-4 w-full'} />
 			</div>
+		);
+	}
+
+	if (!props.quote) {
+		return (
+			<p className={'text-grey-700 text-sm font-medium'}>{'Sorry! No possible routes found for this config'}</p>
 		);
 	}
 
@@ -54,7 +60,7 @@ function FiatReceivingValue(props: {
 	isZapNeeded: boolean;
 	isFetchingQuote: boolean;
 	quote: TPortalsEstimate | null;
-}): ReactElement {
+}): ReactNode {
 	const {configuration} = useWithdrawSolver();
 
 	if (!props.isZapNeeded) {
@@ -65,12 +71,16 @@ function FiatReceivingValue(props: {
 		);
 	}
 
-	if (props.isFetchingQuote || !props.quote) {
+	if (props.isFetchingQuote) {
 		return (
 			<div className={'flex h-4 w-10 flex-col justify-center'}>
 				<div className={'skeleton-lg h-3 w-full'} />
 			</div>
 		);
+	}
+
+	if (!props.quote) {
+		return null;
 	}
 
 	return (
@@ -111,9 +121,15 @@ export function ToToken(): ReactElement {
 		onOpenCurtain(token => onSetAssetToReceive(token), {
 			forceDisplayChainID: configuration.asset.token?.chainID,
 			shouldBypassBalanceCheck: true,
-			highlightedTokens: [configuration.asset.token as TToken]
+			highlightedTokens: [configuration.tokenToReceive as TToken]
 		});
-	}, [configuration.asset.token, onOpenCurtain, onSetAssetToReceive, plausible]);
+	}, [
+		configuration.asset.token?.chainID,
+		configuration.tokenToReceive,
+		onOpenCurtain,
+		onSetAssetToReceive,
+		plausible
+	]);
 
 	return (
 		<div className={'outline-grey-200 flex w-full items-center justify-between rounded-2xl p-4 outline sm:px-6'}>

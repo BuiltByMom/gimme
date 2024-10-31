@@ -62,7 +62,7 @@ export type TWithdrawActions =
 
 export type TWithdrawConfiguration = {
 	asset: TTokenAmountInputElement;
-	vault: TYDaemonVault | undefined;
+	vault: (TYDaemonVault & {pricePerShare?: string}) | undefined;
 	tokenToReceive: TToken | undefined;
 };
 export type TWithdrawSolverContext<TQuote> = TSolverContextBase<TQuote> & {

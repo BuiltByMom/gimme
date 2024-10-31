@@ -1,6 +1,6 @@
 import {createContext, useContext, useMemo, useReducer} from 'react';
 import useWallet from '@builtbymom/web3/contexts/useWallet';
-import {toAddress} from '@builtbymom/web3/utils';
+import {fromNormalized, toAddress, toBigInt, toNormalizedBN} from '@builtbymom/web3/utils';
 import {useIsZapNeeded} from '@lib/hooks/helpers/useIsZapNeeded';
 import {usePortalsSolver} from '@lib/hooks/solvers/usePortalsSolver';
 import {useVanilaSolver} from '@lib/hooks/solvers/useVanilaSolver';
@@ -72,21 +72,67 @@ export function WithdrawSolverContextApp({children}: {children: ReactElement}): 
 	const [configuration, dispatch] = useReducer(configurationReducer, defaultProps.configuration);
 	const {getToken} = useWallet();
 	const {isZapNeeded} = useIsZapNeeded(configuration.asset.token?.address, configuration.tokenToReceive?.address);
+
+	/**********************************************************************************************
+	 ** The vaultToken represents the token of the vault that the user wants to withdraw from. We
+	 ** use getToken to retrieve the token information including balance, decimals, etc. This is
+	 ** used to calculate the maximum amount that can be withdrawn and to validate the withdrawal
+	 ** amount.
+	 ** e.g if selected asset is DAI, vaultToken is yvDAI etc
+	 *********************************************************************************************/
 	const vaultToken = getToken({
 		address: toAddress(configuration.vault?.address),
 		chainID: configuration.vault?.chainID || 137
 	});
 
+	const pps = toNormalizedBN(
+		toBigInt(configuration.vault?.pricePerShare || 0),
+		configuration.vault?.token.decimals || 18
+	);
+
+	/**********************************************************************************************
+	 ** This way we calculate the amount of yvToken based on the selected token by dividing amount
+	 ** by price per share
+	 *********************************************************************************************/
+	const vaultTokenAmount = useMemo(
+		() => (pps.raw ? +configuration.asset.normalizedBigAmount.display / +pps.display : 0),
+		[configuration.asset.normalizedBigAmount.display, pps.display, pps.raw]
+	);
+
+	/**********************************************************************************************
+	 ** Transform vaultTokenAmount to normalized
+	 *********************************************************************************************/
+	const normalizedVaultTokenAmount = useMemo(
+		() =>
+			toNormalizedBN(
+				fromNormalized(vaultTokenAmount, configuration.vault?.token.decimals || 18),
+				configuration.vault?.token.decimals || 18
+			),
+		[configuration.vault?.token.decimals, vaultTokenAmount]
+	);
+
+	/**********************************************************************************************
+	 ** There are cases when normalizedVaultTokenAmount is slightly bigger than user's balance
+	 ** despite correct calculations (or they are not correct). To handle this, take into futher
+	 ** consideration the minimum of user balance and the calculated value.
+	 *********************************************************************************************/
+	const minNormalizedAmount = useMemo(() => {
+		if (vaultToken.balance.raw < normalizedVaultTokenAmount.raw) {
+			return vaultToken.balance;
+		}
+		return normalizedVaultTokenAmount;
+	}, [normalizedVaultTokenAmount, vaultToken.balance]);
+
 	const vaultInputElementLike: TTokenAmountInputElement = useMemo(
 		() => ({
-			amount: vaultToken.balance.display,
-			normalizedBigAmount: vaultToken.balance,
+			amount: minNormalizedAmount.display,
+			normalizedBigAmount: minNormalizedAmount,
 			isValid: 'undetermined',
 			token: vaultToken,
 			status: 'none',
 			UUID: crypto.randomUUID()
 		}),
-		[vaultToken]
+		[minNormalizedAmount, vaultToken]
 	);
 	const portals = usePortalsSolver(vaultInputElementLike, configuration.tokenToReceive?.address, isZapNeeded, false);
 	const vanila = useVanilaSolver(configuration.asset, configuration.vault, isZapNeeded, 'WITHDRAW');
