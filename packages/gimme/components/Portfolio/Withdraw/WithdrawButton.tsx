@@ -19,14 +19,13 @@ export function WithdrawButton(props: {onClose: () => void}): ReactElement {
 	const {
 		onExecuteWithdraw,
 		onExecuteDeposit: onExecutePortalsWithdraw,
-		onExecuteForGnosis: onExecuteWithdrawForGnosis,
 		isApproved,
+		isWithdrawing,
+		isApproving,
+		isDepositing: isWithdrawingPortals,
 		isFetchingAllowance,
 		onApprove,
-		approvalStatus,
-		depositStatus: portalsWithdrawStatus,
-		quote,
-		withdrawStatus
+		quote
 	} = useWithdrawSolver();
 	const chain = useCurrentChain();
 
@@ -154,12 +153,6 @@ export function WithdrawButton(props: {onClose: () => void}): ReactElement {
 	 ** 3. Zap is needed - approve token first and use portals deposit
 	 *****************************************************************************************/
 	const onAction = useCallback(async () => {
-		if (isWalletSafe && isZapNeeded) {
-			return onExecuteWithdrawForGnosis(() => {
-				triggerPlausibleEvent();
-				onRefreshTokens('WITHDRAW');
-			});
-		}
 		if (!isZapNeeded) {
 			return onExecuteWithdraw(() => {
 				triggerPlausibleEvent();
@@ -174,11 +167,9 @@ export function WithdrawButton(props: {onClose: () => void}): ReactElement {
 			onRefreshTokens('WITHDRAW');
 		});
 	}, [
-		isWalletSafe,
 		isZapNeeded,
 		isApproved,
 		onExecutePortalsWithdraw,
-		onExecuteWithdrawForGnosis,
 		triggerPlausibleEvent,
 		onRefreshTokens,
 		onExecuteWithdraw,
@@ -189,8 +180,8 @@ export function WithdrawButton(props: {onClose: () => void}): ReactElement {
 	 ** Display loader if anything is being fetched or in the process
 	 *****************************************************************************************/
 	const isBusy = useMemo(() => {
-		return withdrawStatus.pending || isFetchingAllowance || portalsWithdrawStatus.pending || approvalStatus.pending;
-	}, [approvalStatus.pending, isFetchingAllowance, portalsWithdrawStatus.pending, withdrawStatus.pending]);
+		return isWithdrawing || isFetchingAllowance || isWithdrawingPortals || isApproving;
+	}, [isApproving, isFetchingAllowance, isWithdrawing, isWithdrawingPortals]);
 
 	/******************************************************************************************
 	 ** Disable button if:

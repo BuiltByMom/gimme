@@ -12,6 +12,7 @@ import {useCurrentChain} from '@lib/hooks/useCurrentChain';
 import {Button} from '@lib/primitives/Button';
 
 import type {ReactElement} from 'react';
+import type {TransactionReceipt} from 'viem';
 
 export function EarnWizard(): ReactElement {
 	const {onRefresh, getBalance} = useWallet();
@@ -112,11 +113,12 @@ export function EarnWizard(): ReactElement {
 		onApprove,
 		isApproved,
 		isFetchingAllowance,
-		approvalStatus,
 		onExecuteDeposit,
-		depositStatus,
-		onExecuteForGnosis,
 		isFetchingQuote,
+		isDepositing,
+		isApproving,
+		onDepositSuccessForSolver,
+		onDepositFailureForSolver,
 		quote
 	} = useDepositSolver();
 
@@ -136,19 +138,23 @@ export function EarnWizard(): ReactElement {
 		onResetDeposit();
 	}, [onResetDeposit]);
 
-	const onDepositSuccess = useCallback(() => {
-		onRefreshTokens('DEPOSIT');
-	}, [onRefreshTokens]);
+	const onDepositSuccess = useCallback(
+		(receipt?: TransactionReceipt) => {
+			onRefreshTokens('DEPOSIT');
+			console.log(receipt);
+			if (receipt) {
+				onDepositSuccessForSolver?.(receipt);
+			}
+		},
+		[onDepositSuccessForSolver, onRefreshTokens]
+	);
 
 	const onAction = useCallback(async () => {
-		if (isWalletSafe) {
-			return onExecuteForGnosis(onDepositSuccess);
-		}
 		if (isApproved) {
-			return onExecuteDeposit(onDepositSuccess);
+			return onExecuteDeposit(onDepositSuccess, onDepositFailureForSolver);
 		}
 		return onApprove(() => onRefreshTokens('APPROVE'));
-	}, [isApproved, isWalletSafe, onApprove, onDepositSuccess, onExecuteDeposit, onExecuteForGnosis, onRefreshTokens]);
+	}, [isApproved, onApprove, onDepositFailureForSolver, onDepositSuccess, onExecuteDeposit, onRefreshTokens]);
 
 	const isValid = useMemo((): boolean => {
 		if (isAboveBalance) {
@@ -195,7 +201,7 @@ export function EarnWizard(): ReactElement {
 		return 'Approve';
 	};
 
-	const isBusy = depositStatus.pending || approvalStatus.pending || isFetchingAllowance || isFetchingQuote;
+	const isBusy = isDepositing || isApproving || isFetchingAllowance || isFetchingQuote;
 
 	return (
 		<div className={'col-span-12'}>
