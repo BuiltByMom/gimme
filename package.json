@@ -39,7 +39,7 @@
 		"use-indexeddb": "^2.0.2",
 		"usehooks-ts": "^3.1.0",
 		"vaul": "^1.0.0",
-		"viem": "^2.17.3",
+		"viem": "2.21.16",
 		"wagmi": "2.10.10",
 		"web3-eth-abi": "1.10.0",
 		"xxhashjs": "^0.2.2"
